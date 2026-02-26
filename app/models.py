@@ -2,7 +2,7 @@ from app.database import Base
 from sqlalchemy import (
     Column, Integer, String,
     CheckConstraint, Boolean,
-    func, TIMESTAMP, ForeignKey, Index, Date, Text, UniqueConstraint,
+    func, TIMESTAMP, ForeignKey, Index, Date, Text, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
 
@@ -10,7 +10,7 @@ from sqlalchemy.orm import relationship
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(50), nullable=False, unique=True)
     email = Column(String(255), nullable=False, unique=True)
     hashed_password = Column(String(255), nullable=False)
@@ -25,7 +25,6 @@ class User(Base):
     task_assignments = relationship("TaskAssignment", back_populates="user", cascade="all, delete-orphan", foreign_keys="TaskAssignment.user_id")
     assignments_made = relationship("TaskAssignment", back_populates="assigner", foreign_keys="TaskAssignment.assigned_by")
     project_memberships = relationship("ProjectMember", back_populates="user", cascade="all, delete-orphan")
-    token_blacklist = relationship("TokenBlacklist", back_populates="user", cascade="all, delete-orphan")
 
     # table constraints and indexes
     __table_args__ = (
@@ -41,11 +40,11 @@ class User(Base):
 class Project(Base):
     __tablename__ = "projects"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
     owner_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    is_archived = Column(Boolean, nullable=False, default=False)                          # SRD §3.3
+    is_archived = Column(Boolean, nullable=False, default=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -82,11 +81,11 @@ class ProjectMember(Base):
 class Task(Base):
     __tablename__ = "tasks"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
-    status = Column(String(15), nullable=False, default='todo')       # SRD: todo | in_progress | done
-    priority = Column(String(10), nullable=False, default='medium')   # SRD: low | medium | high
+    status = Column(String(15), nullable=False, default='todo')
+    priority = Column(String(10), nullable=False, default='medium')
     due_date = Column(Date, nullable=True)
     project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
     created_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=False)
@@ -95,7 +94,7 @@ class Task(Base):
 
     # relationships
     project = relationship("Project", back_populates="tasks")
-    owner = relationship("User", back_populates="tasks", foreign_keys="users.id")
+    owner = relationship("User", back_populates="tasks", foreign_keys="Task.created_by")
     task_assignments = relationship("TaskAssignment", back_populates="task", cascade="all, delete-orphan")
 
     # table constraints and indexes
@@ -119,20 +118,20 @@ class Task(Base):
 class TaskAssignment(Base):
     __tablename__ = "task_assignments"
 
-    id = Column(Integer, primary_key=True)                                                       # SRD §3.5: dedicated PK
+    id = Column(Integer, primary_key=True, autoincrement=True)
     task_id = Column(Integer, ForeignKey('tasks.id', ondelete='CASCADE'), nullable=False)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    assigned_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)    # SRD §3.5
+    assigned_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     assigned_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
     # relationships
     task = relationship("Task", back_populates="task_assignments")
-    user = relationship("User", back_populates="task_assignments", foreign_keys="users.id")
-    assigner = relationship("User", back_populates="assignments_made", foreign_keys="users.id")
+    user = relationship("User", back_populates="task_assignments", foreign_keys="TaskAssignment.user_id")
+    assigner = relationship("User", back_populates="assignments_made", foreign_keys="TaskAssignment.assigned_by")
 
     # table constraints and indexes
     __table_args__ = (
-        UniqueConstraint("task_id", "user_id", name="uq_task_assignment_task_user"),  # SRD §3.5
+        UniqueConstraint("task_id", "user_id", name="uq_task_assignment_task_user"),
         Index("ix_task_assignments_user_id", "user_id"),
         Index("ix_task_assignments_task_id", "task_id"),
         Index("ix_task_assignments_task_id_user_id", "task_id", "user_id"),

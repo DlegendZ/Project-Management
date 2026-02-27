@@ -8,3 +8,8 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+class UserUpdatePatch(BaseModel):
+    username: str
+    email: EmailStr
+    password: str

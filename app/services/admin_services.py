@@ -1,6 +1,7 @@
 from app.repositories.admin_repository import AdminRepository
 from app import models, schema
 
+
 class AdminService:
 
     def __init__(self):
@@ -13,6 +14,6 @@ class AdminService:
         user_model = models.User(
             username=user_schema.username,
             email=user_schema.email,
-            hashed_password= user_schema.password
+            hashed_password=user_schema.password,
         )
         return self.admin_repository.create_users_repo(db, user_model)

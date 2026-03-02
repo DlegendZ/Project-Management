@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from app import models
 
 class AdminRepository:
@@ -190,3 +190,63 @@ class AdminRepository:
         db.delete(task)
         db.commit()
 
+        # ------------------------
+        # Assignment Management
+        # ------------------------
+
+    def get_assignment_repo(
+            self,
+            db: Session,
+            task_id: int,
+            user_id: int
+    ):
+        stmt = select(models.TaskAssignment).where(
+            and_(
+                models.TaskAssignment.task_id == task_id,
+                models.TaskAssignment.user_id == user_id
+            )
+        )
+        return db.execute(stmt).scalars().first()
+
+    def list_task_assignments_repo(
+            self,
+            db: Session,
+            task_id: int
+    ):
+        stmt = select(models.TaskAssignment).where(
+            models.TaskAssignment.task_id == task_id
+        )
+        return db.execute(stmt).scalars().all()
+
+    def list_user_assignments_repo(
+            self,
+            db: Session,
+            user_id: int,
+            limit: int = 20,
+            offset: int = 0
+    ):
+        stmt = (
+            select(models.TaskAssignment)
+            .where(models.TaskAssignment.user_id == user_id)
+            .limit(limit)
+            .offset(offset)
+        )
+        return db.execute(stmt).scalars().all()
+
+    def create_assignment_repo(
+            self,
+            db: Session,
+            assignment: models.TaskAssignment
+    ):
+        db.add(assignment)
+        db.commit()
+        db.refresh(assignment)
+        return assignment
+
+    def delete_assignment_repo(
+            self,
+            db: Session,
+            assignment: models.TaskAssignment
+    ):
+        db.delete(assignment)
+        db.commit()

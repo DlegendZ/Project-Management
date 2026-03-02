@@ -75,6 +75,36 @@ class AdminRepository:
         name: str | None = None,
         description: str | None = None,
     ):
-        pass
+        if name is not None :
+            project.name = name
+        if description is not None :
+            project.description = description
+        
+        db.commit()
+        db.refresh(project)
+        return project
+    
+    def archive_project_repo(self, db: Session, project: models.Project):
+        project.is_archived = True
+        db.commit()
+        db.refresh(project)
+        return project
+    
+    def delete_project_repo(self, db: Session, project: models.Project):
+        db.delete(project)
+        db.commit()
+
+    def add_member_to_project_repo(self, db: Session, ProjectMember: models.ProjectMember):
+        db.add(ProjectMember)
+        db.commit()
+        db.refresh(ProjectMember)
+        return ProjectMember
+    
+    def get_project_member_by_id_repo(self, db: Session, user_id: int, project_id: int):
+        return db.get(models.ProjectMember, (project_id, user_id))
+        
+    def remove_member_from_project_repo(self, db: Session, ProjectMember: models.ProjectMember):
+        db.delete(ProjectMember)
+        db.commit()
 
 

@@ -2,17 +2,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app import models
 
-
 class AdminRepository:
 
     # ------------------------
     # User Management
     # ------------------------
 
-    def get_user_by_id(self, db: Session, user_id: int):
+    def get_user_by_id_repo(self, db: Session, user_id: int):
         return db.get(models.User, user_id)
 
-    def list_users(self, db: Session, limit: int = 20, offset: int = 0):
+    def list_users_repo(self, db: Session, limit: int = 20, offset: int = 0):
         stmt = select(models.User).limit(limit).offset(offset)
         return db.execute(stmt).scalars().all()
 
@@ -22,17 +21,17 @@ class AdminRepository:
         db.refresh(user)
         return user
 
-    def deactivate_user(self, db: Session, user: models.User):
+    def deactivate_user_repo(self, db: Session, user: models.User):
         user.is_active = False
         db.commit()
         db.refresh(user)
         return user
 
-    def delete_user(self, db: Session, user: models.User):
+    def delete_user_repo(self, db: Session, user: models.User):
         db.delete(user)
         db.commit()
 
-    def update_user_profile(
+    def update_user_profile_repo(
         self,
         db: Session,
         user: models.User,
@@ -55,10 +54,10 @@ class AdminRepository:
     # Project Management
     # ------------------------
 
-    def get_project_by_id(self, db: Session, project_id: int):
+    def get_project_by_id_repo(self, db: Session, project_id: int):
         return db.get(models.Project, project_id)
 
-    def list_projects(
+    def list_projects_repo(
         self,
         db: Session,
         limit: int = 20,
@@ -67,13 +66,13 @@ class AdminRepository:
         stmt = select(models.Project).limit(limit).offset(offset)
         return db.execute(stmt).scalars().all()
 
-    def create_project(self, db: Session, project: models.Project):
+    def create_project_repo(self, db: Session, project: models.Project):
         db.add(project)
         db.commit()
         db.refresh(project)
         return project
 
-    def update_project(
+    def update_project_repo(
         self,
         db: Session,
         project: models.Project,
@@ -89,17 +88,17 @@ class AdminRepository:
         db.refresh(project)
         return project
 
-    def archive_project(self, db: Session, project: models.Project):
+    def archive_project_repo(self, db: Session, project: models.Project):
         project.is_archived = True
         db.commit()
         db.refresh(project)
         return project
 
-    def delete_project(self, db: Session, project: models.Project):
+    def delete_project_repo(self, db: Session, project: models.Project):
         db.delete(project)
         db.commit()
 
-    def add_project_member(
+    def add_project_member_repo(
         self,
         db: Session,
         member: models.ProjectMember
@@ -109,10 +108,85 @@ class AdminRepository:
         db.refresh(member)
         return member
 
-    def remove_project_member(
+    def remove_project_member_repo(
         self,
         db: Session,
         member: models.ProjectMember
     ):
         db.delete(member)
         db.commit()
+
+    # ------------------------
+    # Task Management
+    # ------------------------
+
+    def get_task_by_id_repo(
+            self,
+            db: Session,
+            task_id: int
+    ):
+        return db.get(models.Task, task_id)
+
+    def list_tasks_by_project_repo(
+            self,
+            db: Session,
+            project_id: int,
+            limit: int = 20,
+            offset: int = 0
+    ):
+        stmt = (
+            select(models.Task)
+            .where(models.Task.project_id == project_id)
+            .limit(limit)
+            .offset(offset)
+        )
+
+        return db.execute(stmt).scalars().all()
+
+    def create_task_repo(
+            self,
+            db: Session,
+            task: models.Task
+    ):
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        return task
+
+    def update_task_repo(
+            self,
+            db: Session,
+            task: models.Task,
+            title: str | None = None,
+            description: str | None = None,
+            status: str | None = None,
+            priority: str | None = None,
+            due_date=None
+    ):
+        if title is not None:
+            task.title = title
+
+        if description is not None:
+            task.description = description
+
+        if status is not None:
+            task.status = status
+
+        if priority is not None:
+            task.priority = priority
+
+        if due_date is not None:
+            task.due_date = due_date
+
+        db.commit()
+        db.refresh(task)
+        return task
+
+    def delete_task_repo(
+            self,
+            db: Session,
+            task: models.Task
+    ):
+        db.delete(task)
+        db.commit()
+

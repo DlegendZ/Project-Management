@@ -17,11 +17,11 @@ class AdminRepository:
         stmt = select(models.User).limit(limit).offset(offset)
         return db.execute(stmt).scalars().all()
 
-    def create_user(self, db: Session, user: models.User):
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return user
+    # def create_user(self, db: Session, user: models.User):
+    #     db.add(user)
+    #     db.commit()
+    #     db.refresh(user)
+    #     return user
 
     def deactivate_user_repo(self, db: Session, user: models.User):
         user.is_active = False

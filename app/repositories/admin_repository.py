@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
 from app import models
+from datetime import date
 
 
 class AdminRepository:
@@ -75,36 +76,127 @@ class AdminRepository:
         name: str | None = None,
         description: str | None = None,
     ):
-        if name is not None :
+        if name is not None:
             project.name = name
-        if description is not None :
+        if description is not None:
             project.description = description
-        
+
         db.commit()
         db.refresh(project)
         return project
-    
+
     def archive_project_repo(self, db: Session, project: models.Project):
         project.is_archived = True
         db.commit()
         db.refresh(project)
         return project
-    
+
     def delete_project_repo(self, db: Session, project: models.Project):
         db.delete(project)
         db.commit()
 
-    def add_member_to_project_repo(self, db: Session, ProjectMember: models.ProjectMember):
+    def add_member_to_project_repo(
+        self, db: Session, ProjectMember: models.ProjectMember
+    ):
         db.add(ProjectMember)
         db.commit()
         db.refresh(ProjectMember)
         return ProjectMember
-    
+
     def get_project_member_by_id_repo(self, db: Session, user_id: int, project_id: int):
         return db.get(models.ProjectMember, (project_id, user_id))
-        
-    def remove_member_from_project_repo(self, db: Session, ProjectMember: models.ProjectMember):
+
+    def remove_member_from_project_repo(
+        self, db: Session, ProjectMember: models.ProjectMember
+    ):
         db.delete(ProjectMember)
         db.commit()
 
+    # ------------------------
+    # Task Management
+    # ------------------------
 
+    def create_task_repo(self, db: Session, task: models.Task):
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        return task
+
+    def get_task_by_id_repo(self, db: Session, task_id: int):
+        return db.get(models.Task, task_id)
+
+    def list_tasks_repo(self, db: Session, limit: int = 20, offset: int = 0):
+        stmt = select(models.Task).limit(limit).offset(offset)
+        return db.execute(stmt).scalars().all()
+
+    def update_task_repo(
+        self,
+        db: Session,
+        task: models.Task,
+        title: str | None = None,
+        description: str | None = None,
+        status: str | None = None,
+        priority: str | None = None,
+    ):
+        if title is not None:
+            task.title = title
+        if description is not None:
+            task.description = description
+        if status is not None:
+            task.status = status
+        if priority is not None:
+            task.priority = priority
+
+        db.commit()
+        db.refresh(task)
+        return task
+
+    def delete_task_repo(self, db: Session, task: models.Task):
+        db.delete(task)
+        db.commit()
+
+    def change_task_due_date(
+        self, db: Session, task: models.Task, due_date: date | None = None
+    ):
+        if due_date is not None:
+            task.due_date = due_date
+        db.commit()
+        db.refresh(task)
+        return task
+
+    # ------------------------
+    # Assignment Management
+    # ------------------------
+
+    def assign_task_to_user_repo(
+        self, db: Session, task_assignment: models.TaskAssignment
+    ):
+        db.add(task_assignment)
+        db.commit()
+        db.refresh(task_assignment)
+        return task_assignment
+
+    def get_task_assignment_by_id_repo(self, db: Session, task_id: int, user_id: int):
+        return db.get(models.TaskAssignment, (task_id, user_id))
+
+    def view_task_assignments_repo(self, db: Session, limit: int = 20, offset: int = 0):
+        stmt = select(models.TaskAssignment).limit(limit).offset(offset)
+        return db.execute(stmt).scalars().all()
+
+    def unassign_task_from_user_repo(
+        self, db: Session, task_assignment: models.TaskAssignment
+    ):
+        db.delete(task_assignment)
+        db.commit()
+
+    def view_own_assignments_repo(
+        self, db: Session, user_id: int, limit: int = 20, offset: int = 0
+    ):
+        stmt = (
+            select(models.Task)
+            .join(models.TaskAssignment)
+            .where(models.TaskAssignment.user_id == user_id)
+            .limit(limit)
+            .offset(offset)
+        )
+        return db.execute(stmt).scalars().all()

@@ -176,12 +176,17 @@ class Task(Base):
 class TaskAssignment(Base):
     __tablename__ = "task_assignments"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
     task_id = Column(
-        Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("tasks.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
     )
     user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
     )
     assigned_by = Column(
         Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True

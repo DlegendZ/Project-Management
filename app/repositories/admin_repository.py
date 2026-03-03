@@ -194,7 +194,9 @@ class AdminRepository:
     ):
         stmt = (
             select(models.Task)
-            .join(models.TaskAssignment)
+            .join(
+                models.TaskAssignment, models.Task.id == models.TaskAssignment.task_id
+            )
             .where(models.TaskAssignment.user_id == user_id)
             .limit(limit)
             .offset(offset)

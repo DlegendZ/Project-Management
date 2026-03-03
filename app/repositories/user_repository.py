@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app import models
 from datetime import date
 
@@ -45,8 +45,35 @@ class UserRepository:
     def get_project_by_id_repo(self, db: Session, project_id: int):
         return db.get(models.Project, project_id)
 
-    def list_projects_repo(self, db: Session, limit: int = 20, offset: int = 0):
-        stmt = select(models.Project).limit(limit).offset(offset)
+    def list_projects_owned_member_repo(
+        self, db: Session, user_id: int, limit: int = 20, offset: int = 0
+    ):
+        stmt = (
+            select(models.Project)
+            .join(
+                models.ProjectMember,
+                models.Project.id == models.ProjectMember.project_id,
+            )
+            .where(
+                or_(
+                    models.Project.owner_id == user_id,
+                    models.ProjectMember.User_id == user_id,
+                )
+            )
+            .limit(limit)
+            .offset(offset)
+        )
+        return db.execute(stmt).scalars().all()
+
+    def list_projects_owned_only_repo(
+        self, db: Session, user_id: int, limit: int = 20, offset: int = 0
+    ):
+        stmt = (
+            select(models.Project)
+            .where(models.Project.owner_id == user_id)
+            .limit(limit)
+            .offset(offset)
+        )
         return db.execute(stmt).scalars().all()
 
     def update_project_repo(
@@ -174,7 +201,9 @@ class UserRepository:
     ):
         stmt = (
             select(models.Task)
-            .join(models.TaskAssignment)
+            .join(
+                models.TaskAssignment, models.Task.id == models.TaskAssignment.task_id
+            )
             .where(models.TaskAssignment.user_id == user_id)
             .limit(limit)
             .offset(offset)

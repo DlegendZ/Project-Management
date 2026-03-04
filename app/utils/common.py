@@ -17,3 +17,13 @@ def normalize_limit(raw_limit: int | None) -> int:
         raise ValueError("Limit must be a positive integer")
 
     return limit
+
+
+def normalize_offset(raw_offset: int | None) -> int:
+    default_offset = 0
+    offset = default_offset if raw_offset is None else raw_offset
+
+    if offset < 0:
+        raise ValueError("Offset must be a non-negative integer")
+
+    return offset

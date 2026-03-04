@@ -1,4 +1,4 @@
-from app.services.admin_services import AdminService
+from app.services.admin_service import AdminService
 from app.database import get_db
 from app import schema
 

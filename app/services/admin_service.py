@@ -186,7 +186,7 @@ class AdminService:
     ) -> models.Task:
         task = self.repo.get_task_by_id_repo(db, task_id)
         ensure_found(task)
-        return self.repo.change_task_due_date(db, task, due_date)
+        return self.repo.change_task_due_date_repo(db, task, due_date)
 
     # ------------------------
     # Assignment Management

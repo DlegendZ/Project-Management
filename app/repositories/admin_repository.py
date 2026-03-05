@@ -169,7 +169,7 @@ class AdminRepository:
         db.delete(task)
         db.commit()
 
-    def change_task_due_date(
+    def change_task_due_date_repo(
         self, db: Session, task: models.Task, due_date: date | None = None
     ) -> models.Task:
         if due_date is not None:

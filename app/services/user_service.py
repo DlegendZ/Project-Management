@@ -1,7 +1,12 @@
 from app.repositories.user_repository import UserRepository
 from app import models
-from app.utils import ensure_found, normalize_limit, normalize_offset
+from app.utils.common import (
+    ensure_found, normalize_limit, normalize_offset
+)
 from datetime import date
+from app.exceptions.errors import (
+    PermissionError
+)
 
 
 class AdminService:
@@ -42,9 +47,16 @@ class AdminService:
         project = models.Project(name=name, description=description)
         return self.repo.create_project_repo(db, project)
 
-    def get_project_by_id_service(self, db, project_id: int) -> models.Project:
+    def get_project_by_id_service(self, db, project_id: int, user_id: int) -> models.Project:
         project = self.repo.get_project_by_id_repo(db, project_id)
         ensure_found(project)
+
+        is_owner = project.owner_id == user_id
+        is_member = self.repo.get_project_member_by_id_repo(db, user_id, project_id)
+
+        if not (is_owner or is_member):
+            raise PermissionError("You do not have permission to access this project")
+        
         return project
 
     def list_projects_owned_member_service(

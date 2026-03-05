@@ -1,4 +1,5 @@
 from typing import TypeVar
+from app import models
 
 T = TypeVar("T")
 

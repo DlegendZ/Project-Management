@@ -155,11 +155,11 @@ class AdminService:
         return task
 
     def list_tasks_service(
-        self, db, limit: int | None = None, offset: int | None = None
+        self, db, project_id: int, limit: int | None = None, offset: int | None = None
     ) -> list[models.Task]:
         limit = normalize_limit(limit)
         offset = normalize_offset(offset)
-        return self.repo.list_tasks_repo(db, limit, offset)
+        return self.repo.list_tasks_repo(db, project_id, limit, offset)
 
     def update_task_service(
         self,

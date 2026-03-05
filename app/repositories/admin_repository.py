@@ -138,9 +138,14 @@ class AdminRepository:
         return db.get(models.Task, task_id)
 
     def list_tasks_repo(
-        self, db: Session, limit: int = 20, offset: int = 0
+        self, db: Session, project_id: int, limit: int = 20, offset: int = 0
     ) -> list[models.Task]:
-        stmt = select(models.Task).limit(limit).offset(offset)
+        stmt = (
+            select(models.Task)
+            .where(models.Task.project_id == project_id)
+            .limit(limit)
+            .offset(offset)
+        )
         return db.execute(stmt).scalars().all()
 
     def update_task_repo(

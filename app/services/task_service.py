@@ -1,87 +1,113 @@
 from sqlalchemy.orm import Session
+from typing import Optional
+from datetime import date
+from app.models.user import User, UserRole
+from app.models.task import Task, TaskStatus, TaskPriority
 from app.repositories.task_repository import TaskRepository
-from app import models
-from app.exceptions.errors import ResourceNotFoundError, PermissionDeniedError
+from app.repositories.project_repository import ProjectRepository
+from app.repositories.assignment_repository import AssignmentRepository
+from app.exceptions import NotFoundException, ForbiddenException, BadRequestException
+from app.schemas.task import TaskCreate, TaskUpdate
 
 
 class TaskService:
+    @staticmethod
+    def _get_project_and_check_membership(db: Session, project_id: int, user: User):
+        from app.services.project_service import ProjectService
+        return ProjectService._get_accessible_project(db, project_id, user)
 
-    def __init__(self):
-        self.repo = TaskRepository()
+    @staticmethod
+    def create_task(db: Session, project_id: int, user: User, data: TaskCreate) -> Task:
+        TaskService._get_project_and_check_membership(db, project_id, user)
+        if data.due_date and data.due_date < date.today():
+            raise BadRequestException("due_date must not be in the past")
+        return TaskRepository.create(
+            db,
+            title=data.title,
+            description=data.description,
+            status=data.status,
+            priority=data.priority,
+            due_date=data.due_date,
+            project_id=project_id,
+            created_by=user.id,
+        )
 
-    def ensure_found(self, resource):
-        if not resource:
-            raise ResourceNotFoundError("task_not_found")
-        return resource
-
-    def ensure_owner_or_creator_or_admin(
-        self, user: models.User, task: models.Task, project: models.Project
-    ):
-        if user.role == "admin":
-            return
-
-        if project.owner_id == user.id:
-            return
-
-        if task.created_by == user.id:
-            return
-
-        raise PermissionDeniedError("permission_denied")
-
-    def create_task(self, db: Session, task: models.Task):
-        task = self.repo.create(db, task)
-        db.commit()
-        db.refresh(task)
+    @staticmethod
+    def get_task(db: Session, project_id: int, task_id: int, user: User) -> Task:
+        TaskService._get_project_and_check_membership(db, project_id, user)
+        task = TaskRepository.get_by_id(db, task_id)
+        if not task or task.project_id != project_id:
+            raise NotFoundException("Task not found")
         return task
 
-    def list_tasks(self, db: Session, project_id: int, **filters):
-        tasks = self.repo.list_tasks(db, project_id, **filters)
-        total = self.repo.count_tasks(db, project_id)
-
-        return {
-            "total": total,
-            "limit": filters.get("limit", 20),
-            "offset": filters.get("offset", 0),
-            "items": tasks,
-        }
-
-    def update_task(
-        self,
+    @staticmethod
+    def list_tasks(
         db: Session,
-        user: models.User,
-        task: models.Task,
-        project: models.Project,
-        **fields
+        project_id: int,
+        user: User,
+        status: Optional[TaskStatus] = None,
+        priority: Optional[TaskPriority] = None,
+        assignee_id: Optional[int] = None,
+        due_date_from: Optional[date] = None,
+        due_date_to: Optional[date] = None,
+        is_overdue: Optional[bool] = None,
+        created_by: Optional[int] = None,
+        q: Optional[str] = None,
+        sort_by: str = "created_at",
+        sort_dir: str = "desc",
+        limit: int = 20,
+        offset: int = 0,
     ):
-        task = self.ensure_found(task)
-        self.ensure_owner_or_creator_or_admin(user, task, project)
+        TaskService._get_project_and_check_membership(db, project_id, user)
+        if due_date_from and due_date_to and due_date_from > due_date_to:
+            raise BadRequestException("due_date_from must not be after due_date_to")
+        return TaskRepository.list_for_project(
+            db, project_id, status=status, priority=priority, assignee_id=assignee_id,
+            due_date_from=due_date_from, due_date_to=due_date_to, is_overdue=is_overdue,
+            created_by=created_by, q=q, sort_by=sort_by, sort_dir=sort_dir, limit=limit, offset=offset,
+        )
 
-        task = self.repo.update(db, task, **fields)
-        db.commit()
-        db.refresh(task)
+    @staticmethod
+    def update_task(db: Session, project_id: int, task_id: int, user: User, data: TaskUpdate) -> Task:
+        project = TaskService._get_project_and_check_membership(db, project_id, user)
+        task = TaskRepository.get_by_id(db, task_id)
+        if not task or task.project_id != project_id:
+            raise NotFoundException("Task not found")
+
+        is_owner = project.owner_id == user.id
+        is_creator = task.created_by == user.id
+        is_admin = user.role == UserRole.admin
+
+        if is_admin or is_owner or is_creator:
+            # Full update allowed
+            updates = {k: v for k, v in data.model_dump(exclude_unset=True).items()}
+        else:
+            # Member: only status, and only if assigned
+            assignment = AssignmentRepository.get_by_task_and_user(db, task_id, user.id)
+            if not assignment:
+                raise ForbiddenException("permission_denied", "You can only update tasks assigned to you")
+            allowed_updates = {"status"}
+            updates = {k: v for k, v in data.model_dump(exclude_unset=True).items() if k in allowed_updates}
+
+        if updates:
+            return TaskRepository.update(db, task, **updates)
         return task
 
-    def change_due_date(
-        self,
-        db: Session,
-        user: models.User,
-        task: models.Task,
-        project: models.Project,
-        due_date,
-    ):
-        task = self.ensure_found(task)
-        self.ensure_owner_or_creator_or_admin(user, task, project)
+    @staticmethod
+    def delete_task(db: Session, project_id: int, task_id: int, user: User) -> None:
+        project = TaskService._get_project_and_check_membership(db, project_id, user)
+        task = TaskRepository.get_by_id(db, task_id)
+        if not task or task.project_id != project_id:
+            raise NotFoundException("Task not found")
 
-        task = self.repo.change_due_date(db, task, due_date)
-        db.commit()
-        db.refresh(task)
-        return task
+        is_owner = project.owner_id == user.id
+        is_creator = task.created_by == user.id
+        is_admin = user.role == UserRole.admin
 
-    def delete_task(
-        self, db: Session, user: models.User, task: models.Task, project: models.Project
-    ):
-        task = self.ensure_found(task)
-        self.ensure_owner_or_creator_or_admin(user, task, project)
+        if not (is_admin or is_owner or is_creator):
+            raise ForbiddenException("permission_denied", "Only project owners or task creators can delete tasks")
+        TaskRepository.delete(db, task)
 
-        self.repo.delete(db, task)
-        db.commit()
+    @staticmethod
+    def list_my_tasks(db: Session, user: User, limit: int = 20, offset: int = 0):
+        return TaskRepository.list_assigned_to_user(db, user.id, limit=limit, offset=offset)

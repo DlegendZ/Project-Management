@@ -1,49 +1,41 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import select, func
-from app import models
+from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import select
+from typing import Optional
+from app.models.assignment import Assignment
 
 
 class AssignmentRepository:
+    @staticmethod
+    def get_by_task_and_user(db: Session, task_id: int, user_id: int) -> Optional[Assignment]:
+        stmt = select(Assignment).where(
+            Assignment.task_id == task_id,
+            Assignment.user_id == user_id,
+        )
+        return db.execute(stmt).scalar_one_or_none()
 
-    def count_assignments_for_task(self, db: Session, task_id: int) -> int:
-        stmt = select(func.count()).where(models.TaskAssignment.task_id == task_id)
-        return db.execute(stmt).scalar_one()
-
-    def assign(
-        self, db: Session, assignment: models.TaskAssignment
-    ) -> models.TaskAssignment:
+    @staticmethod
+    def create(db: Session, task_id: int, user_id: int, assigned_by: int) -> Assignment:
+        assignment = Assignment(task_id=task_id, user_id=user_id, assigned_by=assigned_by)
         db.add(assignment)
-        return assignment
+        db.commit()
+        db.refresh(assignment)
+        # reload with relationships
+        return db.execute(
+            select(Assignment)
+            .where(Assignment.id == assignment.id)
+            .options(selectinload(Assignment.assignee))
+        ).scalar_one()
 
-    def get(
-        self, db: Session, task_id: int, user_id: int
-    ) -> models.TaskAssignment | None:
-        return db.get(models.TaskAssignment, (task_id, user_id))
-
-    def list_for_task(
-        self, db: Session, task_id: int, limit: int = 20, offset: int = 0
-    ) -> list[models.TaskAssignment]:
-        stmt = (
-            select(models.TaskAssignment)
-            .where(models.TaskAssignment.task_id == task_id)
-            .limit(limit)
-            .offset(offset)
-        )
-        return db.execute(stmt).scalars().all()
-
-    def unassign(self, db: Session, assignment: models.TaskAssignment) -> None:
+    @staticmethod
+    def delete(db: Session, assignment: Assignment) -> None:
         db.delete(assignment)
+        db.commit()
 
-    def list_tasks_for_user(
-        self, db: Session, user_id: int, limit: int = 20, offset: int = 0
-    ) -> list[models.Task]:
+    @staticmethod
+    def list_for_task(db: Session, task_id: int) -> list[Assignment]:
         stmt = (
-            select(models.Task)
-            .join(
-                models.TaskAssignment, models.Task.id == models.TaskAssignment.task_id
-            )
-            .where(models.TaskAssignment.user_id == user_id)
-            .limit(limit)
-            .offset(offset)
+            select(Assignment)
+            .where(Assignment.task_id == task_id)
+            .options(selectinload(Assignment.assignee))
         )
-        return db.execute(stmt).scalars().all()
+        return list(db.execute(stmt).scalars().all())

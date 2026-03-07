@@ -1,50 +1,58 @@
 from sqlalchemy.orm import Session
+from app.models.user import User, UserRole
 from app.repositories.assignment_repository import AssignmentRepository
-from app import models
-from app.exceptions.errors import ResourceNotFoundError, DuplicateAssignmentError
+from app.repositories.project_repository import ProjectRepository
+from app.repositories.task_repository import TaskRepository
+from app.exceptions import NotFoundException, ForbiddenException, ConflictException
 
 
 class AssignmentService:
+    @staticmethod
+    def _check_owner_or_admin(project, user: User):
+        if user.role != UserRole.admin and project.owner_id != user.id:
+            raise ForbiddenException("permission_denied", "Only project owners can manage assignments")
 
-    def __init__(self):
-        self.repo = AssignmentRepository()
+    @staticmethod
+    def assign_user(db: Session, project_id: int, task_id: int, user: User, assignee_id: int):
+        from app.services.project_service import ProjectService
+        project = ProjectService._get_accessible_project(db, project_id, user)
+        AssignmentService._check_owner_or_admin(project, user)
 
-    def ensure_found(self, resource):
-        if not resource:
-            raise ResourceNotFoundError("assignment_not_found")
-        return resource
+        task = TaskRepository.get_by_id(db, task_id)
+        if not task or task.project_id != project_id:
+            raise NotFoundException("Task not found")
 
-    def assign_user(self, db: Session, assignment: models.TaskAssignment):
-        existing = self.repo.get(db, assignment.task_id, assignment.user_id)
+        # Assignee must be a project member
+        member = ProjectRepository.get_member(db, project_id, assignee_id)
+        if not member:
+            raise ForbiddenException("not_a_member", "User must be a project member to be assigned")
 
+        existing = AssignmentRepository.get_by_task_and_user(db, task_id, assignee_id)
         if existing:
-            raise DuplicateAssignmentError("duplicate_assignment")
+            raise ConflictException("duplicate_assignment", "User already assigned to this task")
 
-        assignment = self.repo.assign(db, assignment)
-        db.commit()
-        db.refresh(assignment)
-        return assignment
+        return AssignmentRepository.create(db, task_id=task_id, user_id=assignee_id, assigned_by=user.id)
 
-    def list_assignments(
-        self, db: Session, task_id: int, limit: int = 20, offset: int = 0
-    ):
-        assignments = self.repo.list_for_task(db, task_id, limit, offset)
-        total = self.repo.count_assignments_for_task(db, task_id)
+    @staticmethod
+    def unassign_user(db: Session, project_id: int, task_id: int, user: User, assignee_id: int) -> None:
+        from app.services.project_service import ProjectService
+        project = ProjectService._get_accessible_project(db, project_id, user)
+        AssignmentService._check_owner_or_admin(project, user)
 
-        return {
-            "total": total,
-            "limit": limit,
-            "offset": offset,
-            "items": assignments,
-        }
+        task = TaskRepository.get_by_id(db, task_id)
+        if not task or task.project_id != project_id:
+            raise NotFoundException("Task not found")
 
-    def unassign_user(self, db: Session, assignment: models.TaskAssignment):
-        assignment = self.ensure_found(assignment)
+        assignment = AssignmentRepository.get_by_task_and_user(db, task_id, assignee_id)
+        if not assignment:
+            raise NotFoundException("Assignment not found")
+        AssignmentRepository.delete(db, assignment)
 
-        self.repo.unassign(db, assignment)
-        db.commit()
-
-    def list_tasks_for_user(
-        self, db: Session, user_id: int, limit: int = 20, offset: int = 0
-    ):
-        return self.repo.list_tasks_for_user(db, user_id, limit, offset)
+    @staticmethod
+    def list_assignments(db: Session, project_id: int, task_id: int, user: User):
+        from app.services.project_service import ProjectService
+        ProjectService._get_accessible_project(db, project_id, user)
+        task = TaskRepository.get_by_id(db, task_id)
+        if not task or task.project_id != project_id:
+            raise NotFoundException("Task not found")
+        return AssignmentRepository.list_for_task(db, task_id)

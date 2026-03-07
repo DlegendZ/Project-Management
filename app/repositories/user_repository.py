@@ -1,43 +1,48 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
-from app import models
+from typing import Optional
+from app.models.user import User
 
 
 class UserRepository:
+    @staticmethod
+    def get_by_id(db: Session, user_id: int) -> Optional[User]:
+        return db.get(User, user_id)
 
-    def get_by_id(self, db: Session, user_id: int) -> models.User | None:
-        return db.get(models.User, user_id)
+    @staticmethod
+    def get_by_email(db: Session, email: str) -> Optional[User]:
+        stmt = select(User).where(func.lower(User.email) == email.lower())
+        return db.execute(stmt).scalar_one_or_none()
 
-    def list_users(
-        self, db: Session, limit: int = 20, offset: int = 0
-    ) -> list[models.User]:
-        stmt = select(models.User).limit(limit).offset(offset)
-        return db.execute(stmt).scalars().all()
+    @staticmethod
+    def get_by_username(db: Session, username: str) -> Optional[User]:
+        stmt = select(User).where(func.lower(User.username) == username.lower())
+        return db.execute(stmt).scalar_one_or_none()
 
-    def count_users(self, db: Session) -> int:
-        stmt = select(func.count()).select_from(models.User)
-        return db.execute(stmt).scalar_one()
-
-    def deactivate_user(self, db: Session, user: models.User) -> models.User:
-        user.is_active = False
+    @staticmethod
+    def create(db: Session, **kwargs) -> User:
+        user = User(**kwargs)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
         return user
 
-    def delete_user(self, db: Session, user: models.User) -> None:
+    @staticmethod
+    def update(db: Session, user: User, **kwargs) -> User:
+        for key, value in kwargs.items():
+            setattr(user, key, value)
+        db.commit()
+        db.refresh(user)
+        return user
+
+    @staticmethod
+    def delete(db: Session, user: User) -> None:
         db.delete(user)
+        db.commit()
 
-    def update_profile(
-        self,
-        db: Session,
-        user: models.User,
-        username: str | None = None,
-        email: str | None = None,
-        hashed_password: str | None = None,
-    ) -> models.User:
-        if username is not None:
-            user.username = username
-        if email is not None:
-            user.email = email
-        if hashed_password is not None:
-            user.hashed_password = hashed_password
-
-        return user
+    @staticmethod
+    def list_all(db: Session, limit: int = 20, offset: int = 0) -> tuple[list[User], int]:
+        total = db.execute(select(func.count()).select_from(User)).scalar_one()
+        stmt = select(User).limit(limit).offset(offset).order_by(User.id)
+        users = db.execute(stmt).scalars().all()
+        return list(users), total

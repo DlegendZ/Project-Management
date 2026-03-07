@@ -1,58 +1,122 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import select, func
-from app import models
+from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import select, func, or_
+from typing import Optional
+from app.models.project import Project
+from app.models.project_member import ProjectMember
 
 
 class ProjectRepository:
+    @staticmethod
+    def get_by_id(db: Session, project_id: int) -> Optional[Project]:
+        stmt = (
+            select(Project)
+            .where(Project.id == project_id)
+            .options(selectinload(Project.members))
+        )
+        return db.execute(stmt).scalar_one_or_none()
 
-    def create(self, db: Session, project: models.Project) -> models.Project:
+    @staticmethod
+    def create(db: Session, **kwargs) -> Project:
+        project = Project(**kwargs)
         db.add(project)
+        db.commit()
+        db.refresh(project)
         return project
 
-    def get_by_id(self, db: Session, project_id: int) -> models.Project | None:
-        return db.get(models.Project, project_id)
-
-    def list_projects(
-        self, db: Session, limit: int = 20, offset: int = 0
-    ) -> list[models.Project]:
-        stmt = select(models.Project).limit(limit).offset(offset)
-        return db.execute(stmt).scalars().all()
-
-    def count_projects(self, db: Session) -> int:
-        stmt = select(func.count()).select_from(models.Project)
-        return db.execute(stmt).scalar_one()
-
-    def update(
-        self,
-        db: Session,
-        project: models.Project,
-        name: str | None = None,
-        description: str | None = None,
-    ) -> models.Project:
-        if name is not None:
-            project.name = name
-        if description is not None:
-            project.description = description
-
+    @staticmethod
+    def update(db: Session, project: Project, **kwargs) -> Project:
+        for key, value in kwargs.items():
+            setattr(project, key, value)
+        db.commit()
+        db.refresh(project)
         return project
 
-    def archive(self, db: Session, project: models.Project) -> models.Project:
-        project.is_archived = True
-        return project
-
-    def delete(self, db: Session, project: models.Project) -> None:
+    @staticmethod
+    def delete(db: Session, project: Project) -> None:
         db.delete(project)
+        db.commit()
 
-    def add_member(
-        self, db: Session, project_member: models.ProjectMember
-    ) -> models.ProjectMember:
-        db.add(project_member)
-        return project_member
+    @staticmethod
+    def list_for_user(
+        db: Session,
+        user_id: int,
+        is_archived: Optional[bool] = False,
+        search: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[Project], int]:
+        accessible = (
+            select(Project.id)
+            .outerjoin(ProjectMember, ProjectMember.project_id == Project.id)
+            .where(
+                or_(
+                    Project.owner_id == user_id,
+                    ProjectMember.user_id == user_id,
+                )
+            )
+        )
+        stmt = select(Project).where(Project.id.in_(accessible))
+        count_stmt = select(func.count()).select_from(Project).where(Project.id.in_(accessible))
 
-    def get_member(
-        self, db: Session, user_id: int, project_id: int
-    ) -> models.ProjectMember | None:
-        return db.get(models.ProjectMember, (project_id, user_id))
+        if is_archived is not None:
+            stmt = stmt.where(Project.is_archived == is_archived)
+            count_stmt = count_stmt.where(Project.is_archived == is_archived)
+        if search:
+            stmt = stmt.where(Project.name.ilike(f"%{search}%"))
+            count_stmt = count_stmt.where(Project.name.ilike(f"%{search}%"))
 
-    def remove_member(self, db: Session, project_member: models.ProjectMember) -> None:
-        db.delete(project_member)
+        total = db.execute(count_stmt).scalar_one()
+        projects = db.execute(stmt.limit(limit).offset(offset).order_by(Project.id)).scalars().all()
+        return list(projects), total
+
+    @staticmethod
+    def list_all(
+        db: Session,
+        is_archived: Optional[bool] = None,
+        search: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[Project], int]:
+        stmt = select(Project)
+        count_stmt = select(func.count()).select_from(Project)
+
+        if is_archived is not None:
+            stmt = stmt.where(Project.is_archived == is_archived)
+            count_stmt = count_stmt.where(Project.is_archived == is_archived)
+        if search:
+            stmt = stmt.where(Project.name.ilike(f"%{search}%"))
+            count_stmt = count_stmt.where(Project.name.ilike(f"%{search}%"))
+
+        total = db.execute(count_stmt).scalar_one()
+        projects = db.execute(stmt.limit(limit).offset(offset).order_by(Project.id)).scalars().all()
+        return list(projects), total
+
+    @staticmethod
+    def get_member(db: Session, project_id: int, user_id: int) -> Optional[ProjectMember]:
+        stmt = select(ProjectMember).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == user_id,
+        )
+        return db.execute(stmt).scalar_one_or_none()
+
+    @staticmethod
+    def add_member(db: Session, project_id: int, user_id: int) -> ProjectMember:
+        member = ProjectMember(project_id=project_id, user_id=user_id)
+        db.add(member)
+        db.commit()
+        db.refresh(member)
+        return member
+
+    @staticmethod
+    def remove_member(db: Session, member: ProjectMember) -> None:
+        db.delete(member)
+        db.commit()
+
+    @staticmethod
+    def list_members(db: Session, project_id: int) -> list[ProjectMember]:
+        stmt = (
+            select(ProjectMember)
+            .where(ProjectMember.project_id == project_id)
+            .options(selectinload(ProjectMember.user))
+        )
+        return list(db.execute(stmt).scalars().all())

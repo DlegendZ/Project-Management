@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 from app.schemas.user import UserResponse
 
 
@@ -16,6 +17,3 @@ class AssignmentResponse(BaseModel):
     assignee: Optional[UserResponse] = None
 
     model_config = {"from_attributes": True}
-
-from typing import Optional  # noqa: E402
-AssignmentResponse.model_rebuild()

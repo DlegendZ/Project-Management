@@ -32,7 +32,8 @@ def test_update_project_by_non_owner_raises(db: Session):
     other = create_test_user(db, username="other", email="other@example.com")
     db.commit()
     project = make_project(db, owner)
-    with pytest.raises(ForbiddenException):
+    # Non-member gets NotFoundException (project doesn't appear to exist)
+    with pytest.raises(NotFoundException):
         ProjectService.update_project(db, project.id, other, ProjectUpdate(name="New Name"))
 
 
@@ -70,7 +71,8 @@ def test_delete_project_by_non_owner_raises(db: Session):
     other = create_test_user(db, username="other4", email="other4@example.com")
     db.commit()
     project = make_project(db, owner)
-    with pytest.raises(ForbiddenException):
+    # Non-member gets NotFoundException (project doesn't appear to exist)
+    with pytest.raises(NotFoundException):
         ProjectService.delete_project(db, project.id, other)
 
 

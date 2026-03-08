@@ -32,7 +32,9 @@ def test_deactivate_user_as_admin(client: TestClient, admin_headers: dict, db: S
     assert resp.json()["is_active"] is False
 
 
-def test_deactivate_user_as_regular_user_returns_403(client: TestClient, user_headers: dict, db: Session):
+def test_deactivate_user_as_regular_user_returns_403(
+    client: TestClient, user_headers: dict, db: Session
+):
     user = create_test_user(db, username="todeact3", email="deact3@example.com")
     db.commit()
     resp = client.patch(f"/api/v1/users/{user.id}/deactivate", headers=user_headers)
@@ -47,7 +49,9 @@ def test_delete_user_as_admin(client: TestClient, admin_headers: dict, db: Sessi
 
 
 def test_update_own_profile(client: TestClient, user_headers: dict, test_user):
-    resp = client.patch("/api/v1/users/me", headers=user_headers, json={"username": "updatedname"})
+    resp = client.patch(
+        "/api/v1/users/me", headers=user_headers, json={"username": "updatedname"}
+    )
     assert resp.status_code == 200
     assert resp.json()["username"] == "updatedname"
 

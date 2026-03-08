@@ -20,11 +20,17 @@ def list_my_tasks(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    tasks, total = TaskService.list_my_tasks(db, current_user, limit=limit, offset=offset)
-    return PaginatedResponse(total=total, limit=limit, offset=offset, items=_build_task_responses(tasks))
+    tasks, total = TaskService.list_my_tasks(
+        db, current_user, limit=limit, offset=offset
+    )
+    return PaginatedResponse(
+        total=total, limit=limit, offset=offset, items=_build_task_responses(tasks)
+    )
 
 
-@router.get("/projects/{project_id}/tasks", response_model=PaginatedResponse[TaskResponse])
+@router.get(
+    "/projects/{project_id}/tasks", response_model=PaginatedResponse[TaskResponse]
+)
 def list_tasks(
     project_id: int,
     status: Optional[TaskStatus] = None,
@@ -43,15 +49,30 @@ def list_tasks(
     db: Session = Depends(get_db),
 ):
     tasks, total = TaskService.list_tasks(
-        db, project_id, current_user,
-        status=status, priority=priority, assignee_id=assignee_id,
-        due_date_from=due_date_from, due_date_to=due_date_to, is_overdue=is_overdue,
-        created_by=created_by, q=q, sort_by=sort_by, sort_dir=sort_dir, limit=limit, offset=offset,
+        db,
+        project_id,
+        current_user,
+        status=status,
+        priority=priority,
+        assignee_id=assignee_id,
+        due_date_from=due_date_from,
+        due_date_to=due_date_to,
+        is_overdue=is_overdue,
+        created_by=created_by,
+        q=q,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        limit=limit,
+        offset=offset,
     )
-    return PaginatedResponse(total=total, limit=limit, offset=offset, items=_build_task_responses(tasks))
+    return PaginatedResponse(
+        total=total, limit=limit, offset=offset, items=_build_task_responses(tasks)
+    )
 
 
-@router.post("/projects/{project_id}/tasks", response_model=TaskResponse, status_code=201)
+@router.post(
+    "/projects/{project_id}/tasks", response_model=TaskResponse, status_code=201
+)
 def create_task(
     project_id: int,
     data: TaskCreate,
@@ -97,8 +118,11 @@ def delete_task(
 
 def _build_task_response(task) -> TaskResponse:
     from app.schemas.task import AssigneeInfo
+
     assignees = [
-        AssigneeInfo(id=a.assignee.id, username=a.assignee.username, email=a.assignee.email)
+        AssigneeInfo(
+            id=a.assignee.id, username=a.assignee.username, email=a.assignee.email
+        )
         for a in task.assignments
         if a.assignee
     ]

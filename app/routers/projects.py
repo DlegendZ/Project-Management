@@ -4,7 +4,13 @@ from typing import Optional
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, AddMemberRequest, ProjectMemberResponse
+from app.schemas.project import (
+    ProjectCreate,
+    ProjectUpdate,
+    ProjectResponse,
+    AddMemberRequest,
+    ProjectMemberResponse,
+)
 from app.schemas.common import PaginatedResponse
 from app.services.project_service import ProjectService
 
@@ -20,7 +26,14 @@ def list_projects(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    projects, total = ProjectService.list_projects(db, current_user, is_archived=is_archived, search=search, limit=limit, offset=offset)
+    projects, total = ProjectService.list_projects(
+        db,
+        current_user,
+        is_archived=is_archived,
+        search=search,
+        limit=limit,
+        offset=offset,
+    )
     return PaginatedResponse(total=total, limit=limit, offset=offset, items=projects)
 
 
@@ -79,7 +92,9 @@ def list_members(
     return ProjectService.list_members(db, project_id, current_user)
 
 
-@router.post("/{project_id}/members", response_model=ProjectMemberResponse, status_code=201)
+@router.post(
+    "/{project_id}/members", response_model=ProjectMemberResponse, status_code=201
+)
 def add_member(
     project_id: int,
     data: AddMemberRequest,

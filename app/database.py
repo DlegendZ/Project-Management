@@ -3,7 +3,6 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from typing import Generator
 from app.config import settings
 
-
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,

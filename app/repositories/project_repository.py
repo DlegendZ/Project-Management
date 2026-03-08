@@ -56,7 +56,9 @@ class ProjectRepository:
             )
         )
         stmt = select(Project).where(Project.id.in_(accessible))
-        count_stmt = select(func.count()).select_from(Project).where(Project.id.in_(accessible))
+        count_stmt = (
+            select(func.count()).select_from(Project).where(Project.id.in_(accessible))
+        )
 
         if is_archived is not None:
             stmt = stmt.where(Project.is_archived == is_archived)
@@ -66,7 +68,11 @@ class ProjectRepository:
             count_stmt = count_stmt.where(Project.name.ilike(f"%{search}%"))
 
         total = db.execute(count_stmt).scalar_one()
-        projects = db.execute(stmt.limit(limit).offset(offset).order_by(Project.id)).scalars().all()
+        projects = (
+            db.execute(stmt.limit(limit).offset(offset).order_by(Project.id))
+            .scalars()
+            .all()
+        )
         return list(projects), total
 
     @staticmethod
@@ -88,11 +94,17 @@ class ProjectRepository:
             count_stmt = count_stmt.where(Project.name.ilike(f"%{search}%"))
 
         total = db.execute(count_stmt).scalar_one()
-        projects = db.execute(stmt.limit(limit).offset(offset).order_by(Project.id)).scalars().all()
+        projects = (
+            db.execute(stmt.limit(limit).offset(offset).order_by(Project.id))
+            .scalars()
+            .all()
+        )
         return list(projects), total
 
     @staticmethod
-    def get_member(db: Session, project_id: int, user_id: int) -> Optional[ProjectMember]:
+    def get_member(
+        db: Session, project_id: int, user_id: int
+    ) -> Optional[ProjectMember]:
         stmt = select(ProjectMember).where(
             ProjectMember.project_id == project_id,
             ProjectMember.user_id == user_id,

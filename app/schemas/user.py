@@ -31,7 +31,9 @@ class UpdateProfileRequest(BaseModel):
         if not 3 <= len(v) <= 50:
             raise ValueError("Username must be 3-50 characters")
         if not re.match(r"^[a-zA-Z0-9_]+$", v):
-            raise ValueError("Username must contain only alphanumeric characters and underscores")
+            raise ValueError(
+                "Username must contain only alphanumeric characters and underscores"
+            )
         return v
 
     @field_validator("new_password")

@@ -14,6 +14,7 @@ class TaskService:
     @staticmethod
     def _get_project_and_check_membership(db: Session, project_id: int, user: User):
         from app.services.project_service import ProjectService
+
         return ProjectService._get_accessible_project(db, project_id, user)
 
     @staticmethod
@@ -62,13 +63,26 @@ class TaskService:
         if due_date_from and due_date_to and due_date_from > due_date_to:
             raise BadRequestException("due_date_from must not be after due_date_to")
         return TaskRepository.list_for_project(
-            db, project_id, status=status, priority=priority, assignee_id=assignee_id,
-            due_date_from=due_date_from, due_date_to=due_date_to, is_overdue=is_overdue,
-            created_by=created_by, q=q, sort_by=sort_by, sort_dir=sort_dir, limit=limit, offset=offset,
+            db,
+            project_id,
+            status=status,
+            priority=priority,
+            assignee_id=assignee_id,
+            due_date_from=due_date_from,
+            due_date_to=due_date_to,
+            is_overdue=is_overdue,
+            created_by=created_by,
+            q=q,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            limit=limit,
+            offset=offset,
         )
 
     @staticmethod
-    def update_task(db: Session, project_id: int, task_id: int, user: User, data: TaskUpdate) -> Task:
+    def update_task(
+        db: Session, project_id: int, task_id: int, user: User, data: TaskUpdate
+    ) -> Task:
         project = TaskService._get_project_and_check_membership(db, project_id, user)
         task = TaskRepository.get_by_id(db, task_id)
         if not task or task.project_id != project_id:
@@ -85,9 +99,15 @@ class TaskService:
             # Member: only status, and only if assigned
             assignment = AssignmentRepository.get_by_task_and_user(db, task_id, user.id)
             if not assignment:
-                raise ForbiddenException("permission_denied", "You can only update tasks assigned to you")
+                raise ForbiddenException(
+                    "permission_denied", "You can only update tasks assigned to you"
+                )
             allowed_updates = {"status"}
-            updates = {k: v for k, v in data.model_dump(exclude_unset=True).items() if k in allowed_updates}
+            updates = {
+                k: v
+                for k, v in data.model_dump(exclude_unset=True).items()
+                if k in allowed_updates
+            }
 
         if updates:
             return TaskRepository.update(db, task, **updates)
@@ -105,9 +125,14 @@ class TaskService:
         is_admin = user.role == UserRole.admin
 
         if not (is_admin or is_owner or is_creator):
-            raise ForbiddenException("permission_denied", "Only project owners or task creators can delete tasks")
+            raise ForbiddenException(
+                "permission_denied",
+                "Only project owners or task creators can delete tasks",
+            )
         TaskRepository.delete(db, task)
 
     @staticmethod
     def list_my_tasks(db: Session, user: User, limit: int = 20, offset: int = 0):
-        return TaskRepository.list_assigned_to_user(db, user.id, limit=limit, offset=offset)
+        return TaskRepository.list_assigned_to_user(
+            db, user.id, limit=limit, offset=offset
+        )

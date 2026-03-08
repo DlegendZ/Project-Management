@@ -2,7 +2,12 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
-from app.exceptions import ConflictException, NotFoundException, BadRequestException, ForbiddenException
+from app.exceptions import (
+    ConflictException,
+    NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+)
 from app.schemas.user import UpdateProfileRequest
 
 
@@ -14,7 +19,9 @@ class UserService:
         if UserRepository.get_by_username(db, username):
             raise ConflictException("duplicate_username", "Username already taken")
         hashed = AuthService.hash_password(password)
-        return UserRepository.create(db, username=username, email=email, hashed_password=hashed)
+        return UserRepository.create(
+            db, username=username, email=email, hashed_password=hashed
+        )
 
     @staticmethod
     def get_user_by_id(db: Session, user_id: int) -> User:
@@ -40,11 +47,17 @@ class UserService:
             updates["email"] = data.email
         if data.new_password:
             if not data.current_password:
-                raise BadRequestException("Current password is required to set a new password")
-            if not AuthService.verify_password(data.current_password, user.hashed_password):
+                raise BadRequestException(
+                    "Current password is required to set a new password"
+                )
+            if not AuthService.verify_password(
+                data.current_password, user.hashed_password
+            ):
                 raise BadRequestException("Current password is incorrect")
             if AuthService.verify_password(data.new_password, user.hashed_password):
-                raise BadRequestException("New password must differ from current password")
+                raise BadRequestException(
+                    "New password must differ from current password"
+                )
             updates["hashed_password"] = AuthService.hash_password(data.new_password)
         if updates:
             return UserRepository.update(db, user, **updates)

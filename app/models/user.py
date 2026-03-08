@@ -14,19 +14,28 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    username: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False, index=True
+    )
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False, index=True
+    )
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[UserRole] = mapped_column(SAEnum(UserRole), nullable=False, default=UserRole.user)
+    role: Mapped[UserRole] = mapped_column(
+        SAEnum(UserRole), nullable=False, default=UserRole.user
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     token_version: Mapped[int] = mapped_column(nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False,
+        DateTime(timezone=True),
+        nullable=False,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )
 
     # Relationships
@@ -40,6 +49,8 @@ class User(Base):
         "Task", back_populates="creator", foreign_keys="Task.created_by"
     )
     assignments: Mapped[list["Assignment"]] = relationship(
-        "Assignment", back_populates="assignee", foreign_keys="Assignment.user_id",
-        cascade="all, delete-orphan"
+        "Assignment",
+        back_populates="assignee",
+        foreign_keys="Assignment.user_id",
+        cascade="all, delete-orphan",
     )

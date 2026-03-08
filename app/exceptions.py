@@ -16,12 +16,16 @@ class AppException(Exception):
 
 
 class UnauthorizedException(AppException):
-    def __init__(self, code: str = "token_required", message: str = "Authentication required"):
+    def __init__(
+        self, code: str = "token_required", message: str = "Authentication required"
+    ):
         super().__init__(401, code, message)
 
 
 class ForbiddenException(AppException):
-    def __init__(self, code: str = "permission_denied", message: str = "Insufficient permissions"):
+    def __init__(
+        self, code: str = "permission_denied", message: str = "Insufficient permissions"
+    ):
         super().__init__(403, code, message)
 
 
@@ -53,7 +57,9 @@ def register_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
         # Convert errors to ensure they're JSON serializable
         errors = []
         for error in exc.errors():
@@ -61,7 +67,11 @@ def register_exception_handlers(app: FastAPI):
             # Convert any non-serializable objects to strings
             if "ctx" in error_dict and isinstance(error_dict["ctx"], dict):
                 error_dict["ctx"] = {
-                    k: str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
+                    k: (
+                        str(v)
+                        if not isinstance(v, (str, int, float, bool, type(None)))
+                        else v
+                    )
                     for k, v in error_dict["ctx"].items()
                 }
             errors.append(error_dict)
@@ -92,5 +102,7 @@ def register_exception_handlers(app: FastAPI):
         logger.exception(f"Unhandled exception: {exc}")
         return JSONResponse(
             status_code=500,
-            content=error_response("internal_error", "An unexpected error occurred", None),
+            content=error_response(
+                "internal_error", "An unexpected error occurred", None
+            ),
         )

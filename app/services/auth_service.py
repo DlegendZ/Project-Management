@@ -5,7 +5,9 @@ from passlib.context import CryptContext
 from app.config import settings
 from app.exceptions import UnauthorizedException
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=settings.BCRYPT_ROUNDS)
+pwd_context = CryptContext(
+    schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=settings.BCRYPT_ROUNDS
+)
 
 ALGORITHM = "HS256"
 
@@ -21,7 +23,9 @@ class AuthService:
 
     @staticmethod
     def create_access_token(user_id: int, role: str, token_version: int) -> str:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
         payload = {
             "sub": str(user_id),
             "role": role,
@@ -34,7 +38,9 @@ class AuthService:
 
     @staticmethod
     def create_refresh_token(user_id: int, token_version: int) -> str:
-        expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = datetime.now(timezone.utc) + timedelta(
+            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+        )
         payload = {
             "sub": str(user_id),
             "token_version": token_version,

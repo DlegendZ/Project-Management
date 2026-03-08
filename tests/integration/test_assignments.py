@@ -11,7 +11,9 @@ def _add_member(db, project_id, user_id):
     db.commit()
 
 
-def test_assign_user_to_task_success(client: TestClient, user_headers: dict, test_project, test_task, db: Session):
+def test_assign_user_to_task_success(
+    client: TestClient, user_headers: dict, test_project, test_task, db: Session
+):
     assignee = create_test_user(db, username="assignee1", email="assignee1@example.com")
     db.commit()
     _add_member(db, test_project.id, assignee.id)
@@ -24,7 +26,9 @@ def test_assign_user_to_task_success(client: TestClient, user_headers: dict, tes
     assert resp.json()["user_id"] == assignee.id
 
 
-def test_assign_user_duplicate_returns_409(client: TestClient, user_headers: dict, test_project, test_task, db: Session):
+def test_assign_user_duplicate_returns_409(
+    client: TestClient, user_headers: dict, test_project, test_task, db: Session
+):
     assignee = create_test_user(db, username="dupas", email="dupas@example.com")
     db.commit()
     _add_member(db, test_project.id, assignee.id)
@@ -42,7 +46,9 @@ def test_assign_user_duplicate_returns_409(client: TestClient, user_headers: dic
     assert resp.json()["error"]["code"] == "duplicate_assignment"
 
 
-def test_assign_non_member_returns_403(client: TestClient, user_headers: dict, test_project, test_task, db: Session):
+def test_assign_non_member_returns_403(
+    client: TestClient, user_headers: dict, test_project, test_task, db: Session
+):
     non_member = create_test_user(db, username="nonmemas", email="nonmemas@example.com")
     db.commit()
     resp = client.post(
@@ -53,7 +59,9 @@ def test_assign_non_member_returns_403(client: TestClient, user_headers: dict, t
     assert resp.status_code == 403
 
 
-def test_unassign_user_success(client: TestClient, user_headers: dict, test_project, test_task, db: Session):
+def test_unassign_user_success(
+    client: TestClient, user_headers: dict, test_project, test_task, db: Session
+):
     assignee = create_test_user(db, username="unasign", email="unasign@example.com")
     db.commit()
     _add_member(db, test_project.id, assignee.id)
@@ -69,7 +77,9 @@ def test_unassign_user_success(client: TestClient, user_headers: dict, test_proj
     assert resp.status_code == 204
 
 
-def test_list_assignments(client: TestClient, user_headers: dict, test_project, test_task):
+def test_list_assignments(
+    client: TestClient, user_headers: dict, test_project, test_task
+):
     resp = client.get(
         f"/api/v1/projects/{test_project.id}/tasks/{test_task.id}/assignments",
         headers=user_headers,
@@ -78,7 +88,9 @@ def test_list_assignments(client: TestClient, user_headers: dict, test_project, 
     assert isinstance(resp.json(), list)
 
 
-def test_assign_as_non_owner_returns_403(client: TestClient, test_project, test_task, db: Session):
+def test_assign_as_non_owner_returns_403(
+    client: TestClient, test_project, test_task, db: Session
+):
     member = create_test_user(db, username="memonly", email="memonly@example.com")
     assignee = create_test_user(db, username="assigneet", email="assigneet@example.com")
     db.commit()

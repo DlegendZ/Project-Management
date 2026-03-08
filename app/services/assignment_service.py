@@ -10,11 +10,16 @@ class AssignmentService:
     @staticmethod
     def _check_owner_or_admin(project, user: User):
         if user.role != UserRole.admin and project.owner_id != user.id:
-            raise ForbiddenException("permission_denied", "Only project owners can manage assignments")
+            raise ForbiddenException(
+                "permission_denied", "Only project owners can manage assignments"
+            )
 
     @staticmethod
-    def assign_user(db: Session, project_id: int, task_id: int, user: User, assignee_id: int):
+    def assign_user(
+        db: Session, project_id: int, task_id: int, user: User, assignee_id: int
+    ):
         from app.services.project_service import ProjectService
+
         project = ProjectService._get_accessible_project(db, project_id, user)
         AssignmentService._check_owner_or_admin(project, user)
 
@@ -25,17 +30,26 @@ class AssignmentService:
         # Assignee must be a project member
         member = ProjectRepository.get_member(db, project_id, assignee_id)
         if not member:
-            raise ForbiddenException("not_a_member", "User must be a project member to be assigned")
+            raise ForbiddenException(
+                "not_a_member", "User must be a project member to be assigned"
+            )
 
         existing = AssignmentRepository.get_by_task_and_user(db, task_id, assignee_id)
         if existing:
-            raise ConflictException("duplicate_assignment", "User already assigned to this task")
+            raise ConflictException(
+                "duplicate_assignment", "User already assigned to this task"
+            )
 
-        return AssignmentRepository.create(db, task_id=task_id, user_id=assignee_id, assigned_by=user.id)
+        return AssignmentRepository.create(
+            db, task_id=task_id, user_id=assignee_id, assigned_by=user.id
+        )
 
     @staticmethod
-    def unassign_user(db: Session, project_id: int, task_id: int, user: User, assignee_id: int) -> None:
+    def unassign_user(
+        db: Session, project_id: int, task_id: int, user: User, assignee_id: int
+    ) -> None:
         from app.services.project_service import ProjectService
+
         project = ProjectService._get_accessible_project(db, project_id, user)
         AssignmentService._check_owner_or_admin(project, user)
 
@@ -51,6 +65,7 @@ class AssignmentService:
     @staticmethod
     def list_assignments(db: Session, project_id: int, task_id: int, user: User):
         from app.services.project_service import ProjectService
+
         ProjectService._get_accessible_project(db, project_id, user)
         task = TaskRepository.get_by_id(db, task_id)
         if not task or task.project_id != project_id:

@@ -5,7 +5,6 @@ from datetime import date
 from app.models.task import Task, TaskStatus, TaskPriority
 from app.models.assignment import Assignment
 
-
 PRIORITY_ORDER = case(
     (Task.priority == TaskPriority.high, 1),
     (Task.priority == TaskPriority.medium, 2),
@@ -70,7 +69,9 @@ class TaskRepository:
         offset: int = 0,
     ) -> tuple[list[Task], int]:
         stmt = select(Task).where(Task.project_id == project_id)
-        count_stmt = select(func.count()).select_from(Task).where(Task.project_id == project_id)
+        count_stmt = (
+            select(func.count()).select_from(Task).where(Task.project_id == project_id)
+        )
 
         if status:
             stmt = stmt.where(Task.status == status)
@@ -91,14 +92,20 @@ class TaskRepository:
         if is_overdue is True:
             today = date.today()
             stmt = stmt.where(Task.due_date < today, Task.status != TaskStatus.done)
-            count_stmt = count_stmt.where(Task.due_date < today, Task.status != TaskStatus.done)
+            count_stmt = count_stmt.where(
+                Task.due_date < today, Task.status != TaskStatus.done
+            )
         if created_by:
             stmt = stmt.where(Task.created_by == created_by)
             count_stmt = count_stmt.where(Task.created_by == created_by)
         if q:
             pattern = f"%{q}%"
-            stmt = stmt.where(or_(Task.title.ilike(pattern), Task.description.ilike(pattern)))
-            count_stmt = count_stmt.where(or_(Task.title.ilike(pattern), Task.description.ilike(pattern)))
+            stmt = stmt.where(
+                or_(Task.title.ilike(pattern), Task.description.ilike(pattern))
+            )
+            count_stmt = count_stmt.where(
+                or_(Task.title.ilike(pattern), Task.description.ilike(pattern))
+            )
 
         # Sort
         sort_col_map = {
@@ -114,12 +121,18 @@ class TaskRepository:
             order_expr = sort_col.asc() if sort_dir == "asc" else sort_col.desc()
 
         total = db.execute(count_stmt).scalar_one()
-        tasks = db.execute(
-            stmt.options(selectinload(Task.assignments).selectinload(Assignment.assignee))
-            .order_by(order_expr)
-            .limit(limit)
-            .offset(offset)
-        ).scalars().all()
+        tasks = (
+            db.execute(
+                stmt.options(
+                    selectinload(Task.assignments).selectinload(Assignment.assignee)
+                )
+                .order_by(order_expr)
+                .limit(limit)
+                .offset(offset)
+            )
+            .scalars()
+            .all()
+        )
         return list(tasks), total
 
     @staticmethod
@@ -131,8 +144,16 @@ class TaskRepository:
         count_stmt = select(func.count()).select_from(Task).where(Task.id.in_(sub))
 
         total = db.execute(count_stmt).scalar_one()
-        tasks = db.execute(
-            stmt.options(selectinload(Task.assignments).selectinload(Assignment.assignee))
-            .limit(limit).offset(offset).order_by(Task.created_at.desc())
-        ).scalars().all()
+        tasks = (
+            db.execute(
+                stmt.options(
+                    selectinload(Task.assignments).selectinload(Assignment.assignee)
+                )
+                .limit(limit)
+                .offset(offset)
+                .order_by(Task.created_at.desc())
+            )
+            .scalars()
+            .all()
+        )
         return list(tasks), total

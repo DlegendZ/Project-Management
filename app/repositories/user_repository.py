@@ -41,7 +41,9 @@ class UserRepository:
         db.commit()
 
     @staticmethod
-    def list_all(db: Session, limit: int = 20, offset: int = 0) -> tuple[list[User], int]:
+    def list_all(
+        db: Session, limit: int = 20, offset: int = 0
+    ) -> tuple[list[User], int]:
         total = db.execute(select(func.count()).select_from(User)).scalar_one()
         stmt = select(User).limit(limit).offset(offset).order_by(User.id)
         users = db.execute(stmt).scalars().all()

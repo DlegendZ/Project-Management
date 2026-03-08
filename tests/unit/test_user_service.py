@@ -39,7 +39,9 @@ def test_get_user_by_id_not_found_raises(db: Session):
 def test_update_profile_username(db: Session):
     user = create_test_user(db, username="oldname", email="old@example.com")
     db.commit()
-    updated = UserService.update_profile(db, user, UpdateProfileRequest(username="newname"))
+    updated = UserService.update_profile(
+        db, user, UpdateProfileRequest(username="newname")
+    )
     assert updated.username == "newname"
 
 
@@ -47,7 +49,9 @@ def test_update_profile_password_requires_current(db: Session):
     user = create_test_user(db)
     db.commit()
     with pytest.raises(BadRequestException):
-        UserService.update_profile(db, user, UpdateProfileRequest(new_password="NewPass123"))
+        UserService.update_profile(
+            db, user, UpdateProfileRequest(new_password="NewPass123")
+        )
 
 
 def test_update_profile_wrong_current_password_raises(db: Session):
@@ -55,7 +59,9 @@ def test_update_profile_wrong_current_password_raises(db: Session):
     db.commit()
     with pytest.raises(BadRequestException):
         UserService.update_profile(
-            db, user, UpdateProfileRequest(current_password="Wrong1", new_password="NewPass123")
+            db,
+            user,
+            UpdateProfileRequest(current_password="Wrong1", new_password="NewPass123"),
         )
 
 
@@ -64,7 +70,11 @@ def test_update_profile_same_password_raises(db: Session):
     db.commit()
     with pytest.raises(BadRequestException):
         UserService.update_profile(
-            db, user, UpdateProfileRequest(current_password="SamePass1", new_password="SamePass1")
+            db,
+            user,
+            UpdateProfileRequest(
+                current_password="SamePass1", new_password="SamePass1"
+            ),
         )
 
 

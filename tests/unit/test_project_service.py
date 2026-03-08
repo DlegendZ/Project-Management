@@ -20,6 +20,7 @@ def test_create_project_sets_owner(db: Session):
 
 def test_create_project_adds_owner_as_member(db: Session):
     from app.repositories.project_repository import ProjectRepository
+
     user = create_test_user(db)
     db.commit()
     project = make_project(db, user)
@@ -34,7 +35,9 @@ def test_update_project_by_non_owner_raises(db: Session):
     project = make_project(db, owner)
     # Non-member gets NotFoundException (project doesn't appear to exist)
     with pytest.raises(NotFoundException):
-        ProjectService.update_project(db, project.id, other, ProjectUpdate(name="New Name"))
+        ProjectService.update_project(
+            db, project.id, other, ProjectUpdate(name="New Name")
+        )
 
 
 def test_archive_project_toggles(db: Session):
@@ -78,8 +81,12 @@ def test_delete_project_by_non_owner_raises(db: Session):
 
 def test_admin_can_update_any_project(db: Session):
     owner = create_test_user(db, username="owner5", email="owner5@example.com")
-    admin = create_test_user(db, username="adm", email="adm@example.com", role=UserRole.admin)
+    admin = create_test_user(
+        db, username="adm", email="adm@example.com", role=UserRole.admin
+    )
     db.commit()
     project = make_project(db, owner)
-    updated = ProjectService.update_project(db, project.id, admin, ProjectUpdate(name="Admin Updated"))
+    updated = ProjectService.update_project(
+        db, project.id, admin, ProjectUpdate(name="Admin Updated")
+    )
     assert updated.name == "Admin Updated"

@@ -6,7 +6,9 @@ from app.models.assignment import Assignment
 
 class AssignmentRepository:
     @staticmethod
-    def get_by_task_and_user(db: Session, task_id: int, user_id: int) -> Optional[Assignment]:
+    def get_by_task_and_user(
+        db: Session, task_id: int, user_id: int
+    ) -> Optional[Assignment]:
         stmt = select(Assignment).where(
             Assignment.task_id == task_id,
             Assignment.user_id == user_id,
@@ -15,7 +17,9 @@ class AssignmentRepository:
 
     @staticmethod
     def create(db: Session, task_id: int, user_id: int, assigned_by: int) -> Assignment:
-        assignment = Assignment(task_id=task_id, user_id=user_id, assigned_by=assigned_by)
+        assignment = Assignment(
+            task_id=task_id, user_id=user_id, assigned_by=assigned_by
+        )
         db.add(assignment)
         db.commit()
         db.refresh(assignment)

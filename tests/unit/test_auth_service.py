@@ -68,6 +68,7 @@ def test_decode_access_token_invalid_signature_raises():
 
 def test_decode_expired_token_raises():
     from datetime import datetime, timedelta, timezone
+
     payload = {
         "sub": "1",
         "role": "user",

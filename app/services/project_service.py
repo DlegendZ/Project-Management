@@ -25,11 +25,15 @@ class ProjectService:
     @staticmethod
     def _require_owner_or_admin(project: Project, user: User):
         if user.role != UserRole.admin and project.owner_id != user.id:
-            raise ForbiddenException("permission_denied", "Only the project owner can perform this action")
+            raise ForbiddenException(
+                "permission_denied", "Only the project owner can perform this action"
+            )
 
     @staticmethod
     def create_project(db: Session, user: User, data: ProjectCreate) -> Project:
-        project = ProjectRepository.create(db, name=data.name, description=data.description, owner_id=user.id)
+        project = ProjectRepository.create(
+            db, name=data.name, description=data.description, owner_id=user.id
+        )
         # Auto-add owner as member
         ProjectRepository.add_member(db, project.id, user.id)
         return project
@@ -44,18 +48,33 @@ class ProjectService:
         offset: int = 0,
     ):
         if user.role == UserRole.admin:
-            return ProjectRepository.list_all(db, is_archived=is_archived, search=search, limit=limit, offset=offset)
-        return ProjectRepository.list_for_user(db, user.id, is_archived=is_archived, search=search, limit=limit, offset=offset)
+            return ProjectRepository.list_all(
+                db, is_archived=is_archived, search=search, limit=limit, offset=offset
+            )
+        return ProjectRepository.list_for_user(
+            db,
+            user.id,
+            is_archived=is_archived,
+            search=search,
+            limit=limit,
+            offset=offset,
+        )
 
     @staticmethod
     def get_project(db: Session, project_id: int, user: User) -> Project:
         return ProjectService._get_accessible_project(db, project_id, user)
 
     @staticmethod
-    def update_project(db: Session, project_id: int, user: User, data: ProjectUpdate) -> Project:
+    def update_project(
+        db: Session, project_id: int, user: User, data: ProjectUpdate
+    ) -> Project:
         project = ProjectService._get_accessible_project(db, project_id, user)
         ProjectService._require_owner_or_admin(project, user)
-        updates = {k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None}
+        updates = {
+            k: v
+            for k, v in data.model_dump(exclude_unset=True).items()
+            if v is not None
+        }
         if updates:
             return ProjectRepository.update(db, project, **updates)
         return project
@@ -64,7 +83,9 @@ class ProjectService:
     def archive_project(db: Session, project_id: int, user: User) -> Project:
         project = ProjectService._get_accessible_project(db, project_id, user)
         ProjectService._require_owner_or_admin(project, user)
-        return ProjectRepository.update(db, project, is_archived=not project.is_archived)
+        return ProjectRepository.update(
+            db, project, is_archived=not project.is_archived
+        )
 
     @staticmethod
     def delete_project(db: Session, project_id: int, user: User) -> None:
@@ -85,7 +106,9 @@ class ProjectService:
         return ProjectRepository.add_member(db, project_id, member_user_id)
 
     @staticmethod
-    def remove_member(db: Session, project_id: int, user: User, member_user_id: int) -> None:
+    def remove_member(
+        db: Session, project_id: int, user: User, member_user_id: int
+    ) -> None:
         project = ProjectService._get_accessible_project(db, project_id, user)
         ProjectService._require_owner_or_admin(project, user)
         member = ProjectRepository.get_member(db, project_id, member_user_id)

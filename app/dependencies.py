@@ -23,6 +23,7 @@ def get_current_user(
     token_version = payload.get("token_version", 0)
 
     from app.repositories.user_repository import UserRepository
+
     user = UserRepository.get_by_id(db, int(user_id))
     if not user:
         raise UnauthorizedException("invalid_token", "User not found")

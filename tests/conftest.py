@@ -52,7 +52,13 @@ def client(db: Session):
     app.dependency_overrides.clear()
 
 
-def create_test_user(db: Session, username="testuser", email="test@example.com", password="Test1234", role=UserRole.user) -> User:
+def create_test_user(
+    db: Session,
+    username="testuser",
+    email="test@example.com",
+    password="Test1234",
+    role=UserRole.user,
+) -> User:
     hashed = AuthService.hash_password(password)
     user = User(username=username, email=email, hashed_password=hashed, role=role)
     db.add(user)
@@ -61,11 +67,17 @@ def create_test_user(db: Session, username="testuser", email="test@example.com",
 
 
 def create_test_admin(db: Session) -> User:
-    return create_test_user(db, username="admin", email="admin@example.com", role=UserRole.admin)
+    return create_test_user(
+        db, username="admin", email="admin@example.com", role=UserRole.admin
+    )
 
 
-def get_auth_headers(client: TestClient, email="test@example.com", password="Test1234") -> dict:
-    resp = client.post("/api/v1/auth/login", json={"email": email, "password": password})
+def get_auth_headers(
+    client: TestClient, email="test@example.com", password="Test1234"
+) -> dict:
+    resp = client.post(
+        "/api/v1/auth/login", json={"email": email, "password": password}
+    )
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 

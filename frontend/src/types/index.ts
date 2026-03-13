@@ -74,6 +74,12 @@ export interface ProjectMember {
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
+export interface AssigneeInfo {
+  id: number;
+  username: string;
+  email: string;
+}
+
 export interface Task {
   id: number;
   title: string;
@@ -85,8 +91,7 @@ export interface Task {
   created_by: number;
   created_at: string;
   updated_at: string;
-  assignees?: User[];
-  creator?: User;
+  assignees?: AssigneeInfo[];
 }
 
 export interface CreateTaskRequest {
@@ -95,6 +100,7 @@ export interface CreateTaskRequest {
   status?: TaskStatus;
   priority?: TaskPriority;
   due_date?: string;
+  assignee_ids?: number[];
 }
 
 export interface UpdateTaskRequest {
@@ -103,6 +109,7 @@ export interface UpdateTaskRequest {
   status?: TaskStatus;
   priority?: TaskPriority;
   due_date?: string | null;
+  assignee_ids?: number[];
 }
 
 export interface TaskFilters {

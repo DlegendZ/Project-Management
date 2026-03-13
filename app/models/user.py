@@ -40,13 +40,15 @@ class User(Base):
 
     # Relationships
     owned_projects: Mapped[list["Project"]] = relationship(
-        "Project", back_populates="owner", foreign_keys="Project.owner_id"
+        "Project", back_populates="owner", foreign_keys="Project.owner_id",
+        passive_deletes=True,
     )
     project_memberships: Mapped[list["ProjectMember"]] = relationship(
         "ProjectMember", back_populates="user", cascade="all, delete-orphan"
     )
     created_tasks: Mapped[list["Task"]] = relationship(
-        "Task", back_populates="creator", foreign_keys="Task.created_by"
+        "Task", back_populates="creator", foreign_keys="Task.created_by",
+        passive_deletes=True,
     )
     assignments: Mapped[list["Assignment"]] = relationship(
         "Assignment",

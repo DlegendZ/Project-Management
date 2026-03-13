@@ -71,6 +71,17 @@ class UserService:
         return UserRepository.update(db, user, is_active=False)
 
     @staticmethod
+    def activate_user(db: Session, user_id: int) -> User:
+        user = UserRepository.get_by_id(db, user_id)
+        if not user:
+            raise NotFoundException("User not found")
+        return UserRepository.update(db, user, is_active=True)
+
+    @staticmethod
+    def search_users(db: Session, q: str) -> list[User]:
+        return UserRepository.find_by_query(db, q)
+
+    @staticmethod
     def delete_user(db: Session, user_id: int) -> None:
         user = UserRepository.get_by_id(db, user_id)
         if not user:

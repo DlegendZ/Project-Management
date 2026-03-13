@@ -15,13 +15,24 @@ router = APIRouter(tags=["tasks"])
 
 @router.get("/tasks/mine", response_model=PaginatedResponse[TaskResponse])
 def list_my_tasks(
-    limit: int = Query(20, ge=1, le=100),
+    status: Optional[TaskStatus] = None,
+    priority: Optional[TaskPriority] = None,
+    sort_by: Literal["created_at", "due_date", "priority", "updated_at"] = "created_at",
+    sort_dir: Literal["asc", "desc"] = "desc",
+    limit: int = Query(20, ge=1, le=500),
     offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     tasks, total = TaskService.list_my_tasks(
-        db, current_user, limit=limit, offset=offset
+        db,
+        current_user,
+        status=status,
+        priority=priority,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        limit=limit,
+        offset=offset,
     )
     return PaginatedResponse(
         total=total, limit=limit, offset=offset, items=_build_task_responses(tasks)
@@ -43,7 +54,7 @@ def list_tasks(
     q: Optional[str] = None,
     sort_by: Literal["created_at", "due_date", "priority", "updated_at"] = "created_at",
     sort_dir: Literal["asc", "desc"] = "desc",
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=500),
     offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

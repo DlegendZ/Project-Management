@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Input, TextArea, Select } from '../ui/Input';
 import { Button } from '../ui/Button';
-import type { Task, CreateTaskRequest, UpdateTaskRequest, TaskStatus, TaskPriority } from '../../types';
+import { Avatar } from '../ui/Avatar';
+import type { Task, CreateTaskRequest, UpdateTaskRequest, TaskStatus, TaskPriority, AssigneeInfo } from '../../types';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface TaskModalProps {
   onSubmit: (data: CreateTaskRequest | UpdateTaskRequest) => Promise<void>;
   task?: Task | null;
   defaultStatus?: TaskStatus;
+  members?: AssigneeInfo[];
 }
 
 const statusOptions = [
@@ -24,7 +26,14 @@ const priorityOptions = [
   { value: 'high', label: 'High' },
 ];
 
-export function TaskModal({ isOpen, onClose, onSubmit, task, defaultStatus = 'todo' }: TaskModalProps) {
+export function TaskModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  task,
+  defaultStatus = 'todo',
+  members = [],
+}: TaskModalProps) {
   const isEdit = !!task;
 
   const [form, setForm] = useState({
@@ -33,6 +42,7 @@ export function TaskModal({ isOpen, onClose, onSubmit, task, defaultStatus = 'to
     status: defaultStatus as string,
     priority: 'medium' as string,
     due_date: '',
+    assignee_ids: [] as number[],
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,6 +56,7 @@ export function TaskModal({ isOpen, onClose, onSubmit, task, defaultStatus = 'to
           status: task.status,
           priority: task.priority,
           due_date: task.due_date ?? '',
+          assignee_ids: task.assignees?.map((a) => a.id) ?? [],
         });
       } else {
         setForm({
@@ -54,11 +65,21 @@ export function TaskModal({ isOpen, onClose, onSubmit, task, defaultStatus = 'to
           status: defaultStatus,
           priority: 'medium',
           due_date: '',
+          assignee_ids: [],
         });
       }
       setErrors({});
     }
   }, [isOpen, task, defaultStatus]);
+
+  const toggleAssignee = (id: number) => {
+    setForm((f) => ({
+      ...f,
+      assignee_ids: f.assignee_ids.includes(id)
+        ? f.assignee_ids.filter((x) => x !== id)
+        : [...f.assignee_ids, id],
+    }));
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -80,6 +101,7 @@ export function TaskModal({ isOpen, onClose, onSubmit, task, defaultStatus = 'to
         status: form.status as TaskStatus,
         priority: form.priority as TaskPriority,
         due_date: form.due_date || undefined,
+        assignee_ids: form.assignee_ids,
       };
       await onSubmit(payload);
       onClose();
@@ -126,6 +148,34 @@ export function TaskModal({ isOpen, onClose, onSubmit, task, defaultStatus = 'to
           value={form.due_date}
           onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
         />
+
+        {/* Assignees — shown only when the project has members */}
+        {members.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <label className="text-sm text-slate-300 font-medium">Assignees</label>
+            <div className="flex flex-wrap gap-2">
+              {members.map((m) => {
+                const selected = form.assignee_ids.includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => toggleAssignee(m.id)}
+                    className={`flex items-center gap-1.5 pl-1 pr-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                      selected
+                        ? 'bg-indigo-600 border-indigo-500 text-white'
+                        : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    <Avatar name={m.username} size="sm" />
+                    {m.username}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

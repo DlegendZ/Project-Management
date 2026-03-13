@@ -119,4 +119,5 @@ class ProjectService:
     @staticmethod
     def list_members(db: Session, project_id: int, user: User):
         project = ProjectService._get_accessible_project(db, project_id, user)
-        return ProjectRepository.list_members(db, project_id)
+        members = ProjectRepository.list_members(db, project_id)
+        return [m.user for m in members]

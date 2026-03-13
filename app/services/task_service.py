@@ -22,7 +22,8 @@ class TaskService:
         TaskService._get_project_and_check_membership(db, project_id, user)
         if data.due_date and data.due_date < date.today():
             raise BadRequestException("due_date must not be in the past")
-        return TaskRepository.create(
+
+        task = TaskRepository.create(
             db,
             title=data.title,
             description=data.description,
@@ -32,6 +33,15 @@ class TaskService:
             project_id=project_id,
             created_by=user.id,
         )
+
+        # Create assignments if provided
+        if data.assignee_ids:
+            for assignee_id in data.assignee_ids:
+                AssignmentRepository.create(db, task.id, assignee_id, user.id)
+            # Refresh task to include assignments
+            task = TaskRepository.get_by_id(db, task.id)
+
+        return task
 
     @staticmethod
     def get_task(db: Session, project_id: int, task_id: int, user: User) -> Task:
@@ -109,8 +119,23 @@ class TaskService:
                 if k in allowed_updates
             }
 
+        # Handle assignee_ids separately
+        assignee_ids = updates.pop("assignee_ids", None)
+
         if updates:
-            return TaskRepository.update(db, task, **updates)
+            task = TaskRepository.update(db, task, **updates)
+
+        # Update assignments if assignee_ids was provided
+        if assignee_ids is not None:
+            # Delete existing assignments
+            existing_assignments = AssignmentRepository.list_for_task(db, task_id)
+            for assignment in existing_assignments:
+                AssignmentRepository.delete(db, assignment)
+
+            # Create new assignments
+            for user_id in assignee_ids:
+                AssignmentRepository.create(db, task_id, user_id, user.id)
+
         return task
 
     @staticmethod
@@ -132,7 +157,23 @@ class TaskService:
         TaskRepository.delete(db, task)
 
     @staticmethod
-    def list_my_tasks(db: Session, user: User, limit: int = 20, offset: int = 0):
+    def list_my_tasks(
+        db: Session,
+        user: User,
+        status: Optional[TaskStatus] = None,
+        priority: Optional[TaskPriority] = None,
+        sort_by: str = "created_at",
+        sort_dir: str = "desc",
+        limit: int = 20,
+        offset: int = 0,
+    ):
         return TaskRepository.list_assigned_to_user(
-            db, user.id, limit=limit, offset=offset
+            db,
+            user.id,
+            status=status,
+            priority=priority,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            limit=limit,
+            offset=offset,
         )

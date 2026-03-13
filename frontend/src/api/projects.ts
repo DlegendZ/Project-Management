@@ -3,7 +3,7 @@ import type {
   Project,
   CreateProjectRequest,
   UpdateProjectRequest,
-  ProjectMember,
+  User,
   PaginatedResponse,
 } from '../types';
 
@@ -27,7 +27,7 @@ export const projectsApi = {
     apiClient.patch<Project>(`/projects/${id}/archive`).then((r) => r.data),
 
   getMembers: (id: number) =>
-    apiClient.get<PaginatedResponse<ProjectMember>>(`/projects/${id}/members`).then((r) => r.data),
+    apiClient.get<User[]>(`/projects/${id}/members`).then((r) => r.data),
 
   addMember: (projectId: number, userId: number) =>
     apiClient.post(`/projects/${projectId}/members`, { user_id: userId }).then((r) => r.data),

@@ -18,7 +18,7 @@ export function RegisterPage() {
     const e: Record<string, string> = {};
     if (!form.username.trim()) e.username = 'Username is required';
     if (form.username.length < 3) e.username = 'Min 3 characters';
-    if (!/^[a-zA-Z0-9_]+$/.test(form.username)) e.username = 'Alphanumeric + underscores only';
+    if (!/^[a-zA-Z0-9_ ]+$/.test(form.username)) e.username = 'Alphanumeric, underscores, and spaces only';
     if (!form.email) e.email = 'Email is required';
     if (!form.password) e.password = 'Password is required';
     if (form.password.length < 8) e.password = 'Min 8 characters';

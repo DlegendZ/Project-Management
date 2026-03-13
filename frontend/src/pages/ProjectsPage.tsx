@@ -29,7 +29,7 @@ export function ProjectsPage() {
     setLoading(true);
     try {
       const data = await projectsApi.list({
-        is_archived: showArchived ? undefined : false,
+        is_archived: showArchived,
         search: search || undefined,
       });
       setProjects(data.items);

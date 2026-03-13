@@ -137,11 +137,37 @@ class TaskRepository:
 
     @staticmethod
     def list_assigned_to_user(
-        db: Session, user_id: int, limit: int = 20, offset: int = 0
+        db: Session,
+        user_id: int,
+        status: Optional[TaskStatus] = None,
+        priority: Optional[TaskPriority] = None,
+        sort_by: str = "created_at",
+        sort_dir: str = "desc",
+        limit: int = 20,
+        offset: int = 0,
     ) -> tuple[list[Task], int]:
         sub = select(Assignment.task_id).where(Assignment.user_id == user_id)
         stmt = select(Task).where(Task.id.in_(sub))
         count_stmt = select(func.count()).select_from(Task).where(Task.id.in_(sub))
+
+        if status:
+            stmt = stmt.where(Task.status == status)
+            count_stmt = count_stmt.where(Task.status == status)
+        if priority:
+            stmt = stmt.where(Task.priority == priority)
+            count_stmt = count_stmt.where(Task.priority == priority)
+
+        sort_col_map = {
+            "created_at": Task.created_at,
+            "updated_at": Task.updated_at,
+            "due_date": Task.due_date,
+            "priority": PRIORITY_ORDER,
+        }
+        sort_col = sort_col_map.get(sort_by, Task.created_at)
+        if sort_by == "priority":
+            order_expr = sort_col if sort_dir == "asc" else sort_col.desc()
+        else:
+            order_expr = sort_col.asc() if sort_dir == "asc" else sort_col.desc()
 
         total = db.execute(count_stmt).scalar_one()
         tasks = (
@@ -149,9 +175,9 @@ class TaskRepository:
                 stmt.options(
                     selectinload(Task.assignments).selectinload(Assignment.assignee)
                 )
+                .order_by(order_expr)
                 .limit(limit)
                 .offset(offset)
-                .order_by(Task.created_at.desc())
             )
             .scalars()
             .all()

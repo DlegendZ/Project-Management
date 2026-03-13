@@ -15,5 +15,5 @@ export const authApi = {
     apiClient.post('/auth/logout', { refresh_token }).then((r) => r.data),
 
   refresh: (refresh_token: string) =>
-    apiClient.post<TokenResponse>('/auth/refresh', { refresh_token }).then((r) => r.data),
+    apiClient.post<{ access_token: string; token_type: string }>('/auth/refresh', { refresh_token }).then((r) => r.data),
 };

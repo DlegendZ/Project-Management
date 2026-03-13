@@ -24,7 +24,7 @@ import { Input, Select } from '../components/ui/Input';
 import { Spinner } from '../components/ui/Spinner';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
-import type { Project, Task, TaskStatus, ProjectMember, User, TaskFilters } from '../types';
+import type { Project, Task, TaskStatus, User, TaskFilters, AssigneeInfo } from '../types';
 import toast from 'react-hot-toast';
 import type { AxiosError } from 'axios';
 import type { ApiError } from '../types';
@@ -37,8 +37,8 @@ export function ProjectDetailPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [members, setMembers] = useState<ProjectMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true); // only for initial page load
 
   // UI state
   const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -52,29 +52,48 @@ export function ProjectDetailPage() {
   // Filters
   const [filters, setFilters] = useState<TaskFilters>({ limit: 200 });
   const [searchText, setSearchText] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search input — only trigger API call 400 ms after user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchText), 400);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
   const isOwner = project?.owner_id === user?.id || user?.role === 'admin';
 
   const fetchAll = useCallback(async () => {
-    setLoading(true);
     try {
       const [proj, taskData, memberData] = await Promise.all([
         projectsApi.get(projectId),
-        tasksApi.list(projectId, { ...filters, q: searchText || undefined }),
+        tasksApi.list(projectId, { ...filters, q: debouncedSearch || undefined }),
         projectsApi.getMembers(projectId),
       ]);
       setProject(proj);
       setTasks(taskData.items);
-      setMembers(memberData.items);
+      setMembers(memberData);
     } catch {
       toast.error('Failed to load project');
       navigate('/projects');
     } finally {
-      setLoading(false);
+      setLoading(false); // clear initial spinner after first load
     }
-  }, [projectId, filters, searchText, navigate]);
+  }, [projectId, filters, debouncedSearch, navigate]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // ── Assignee helpers ────────────────────────────────────────────────────────
+
+  const syncAssignees = async (taskId: number, newIds: number[], oldIds: number[]) => {
+    const toAdd = newIds.filter((id) => !oldIds.includes(id));
+    const toRemove = oldIds.filter((id) => !newIds.includes(id));
+    await Promise.all([
+      ...toAdd.map((uid) => tasksApi.assign(projectId, taskId, uid)),
+      ...toRemove.map((uid) => tasksApi.unassign(projectId, taskId, uid)),
+    ]);
+  };
+
+  // ── Task handlers ───────────────────────────────────────────────────────────
 
   const handleStatusChange = async (taskId: number, newStatus: TaskStatus) => {
     setTasks((prev) =>
@@ -90,16 +109,32 @@ export function ProjectDetailPage() {
   };
 
   const handleCreateTask = async (data: import('../types').CreateTaskRequest) => {
-    const created = await tasksApi.create(projectId, data);
+    const { assignee_ids = [], ...taskData } = data;
+    const created = await tasksApi.create(projectId, taskData);
+    if (assignee_ids.length > 0) {
+      await syncAssignees(created.id, assignee_ids, []);
+      // Refetch so assignees are populated
+      const refreshed = await tasksApi.get(projectId, created.id);
+      setTasks((prev) => [...prev, refreshed]);
+    } else {
+      setTasks((prev) => [...prev, created]);
+    }
     toast.success('Task created');
-    setTasks((prev) => [...prev, created]);
   };
 
   const handleEditTask = async (data: import('../types').UpdateTaskRequest) => {
     if (!editingTask) return;
-    const updated = await tasksApi.update(projectId, editingTask.id, data);
+    const { assignee_ids, ...taskData } = data;
+    const updated = await tasksApi.update(projectId, editingTask.id, taskData);
+    if (assignee_ids !== undefined) {
+      const oldIds = editingTask.assignees?.map((a) => a.id) ?? [];
+      await syncAssignees(editingTask.id, assignee_ids, oldIds);
+      const refreshed = await tasksApi.get(projectId, editingTask.id);
+      setTasks((prev) => prev.map((t) => (t.id === refreshed.id ? refreshed : t)));
+    } else {
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    }
     toast.success('Task updated');
-    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   };
 
   const handleTaskSubmit = async (data: import('../types').CreateTaskRequest | import('../types').UpdateTaskRequest) => {
@@ -125,6 +160,7 @@ export function ProjectDetailPage() {
     }
   };
 
+  // Only show the full-page spinner on the very first load (project not yet fetched)
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -134,6 +170,13 @@ export function ProjectDetailPage() {
   }
 
   if (!project) return null;
+
+  // Members as AssigneeInfo (id, username, email) for TaskModal
+  const memberAssignees: AssigneeInfo[] = members.map((m) => ({
+    id: m.id,
+    username: m.username,
+    email: m.email,
+  }));
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -266,6 +309,7 @@ export function ProjectDetailPage() {
         onSubmit={handleTaskSubmit}
         task={editingTask}
         defaultStatus={defaultStatus}
+        members={memberAssignees}
       />
 
       {/* Delete task confirm */}
@@ -379,35 +423,40 @@ function MembersModal({
   isOpen: boolean;
   onClose: () => void;
   projectId: number;
-  members: ProjectMember[];
+  members: User[];
   isOwner: boolean;
   onChanged: () => void;
 }) {
   const { user } = useAuthStore();
-  const [addEmail, setAddEmail] = useState('');
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [query, setQuery] = useState('');
   const [addLoading, setAddLoading] = useState(false);
   const [removeLoading, setRemoveLoading] = useState<number | null>(null);
 
+  // Reset query when modal closes
   useEffect(() => {
-    if (isOpen && isOwner) {
-      usersApi.list({ limit: 100 }).then((d) => setAllUsers(d.items)).catch(() => {});
-    }
-  }, [isOpen, isOwner]);
+    if (!isOpen) setQuery('');
+  }, [isOpen]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const found = allUsers.find(
-      (u) => u.email.toLowerCase() === addEmail.toLowerCase() ||
-             u.username.toLowerCase() === addEmail.toLowerCase()
-    );
-    if (!found) { toast.error('User not found'); return; }
-    if (members.find((m) => m.id === found.id)) { toast.error('Already a member'); return; }
+    const q = query.trim();
+    if (!q) return;
+
     setAddLoading(true);
     try {
+      // Search for the user via the backend (accessible to all authenticated users)
+      const results = await usersApi.search(q);
+      const found = results.find(
+        (u) =>
+          u.email.toLowerCase() === q.toLowerCase() ||
+          u.username.toLowerCase() === q.toLowerCase()
+      );
+      if (!found) { toast.error('User not found'); return; }
+      if (members.find((m) => m.id === found.id)) { toast.error('Already a member'); return; }
+
       await projectsApi.addMember(projectId, found.id);
       toast.success(`${found.username} added`);
-      setAddEmail('');
+      setQuery('');
       onChanged();
     } catch (err) {
       const axiosErr = err as AxiosError<ApiError>;
@@ -437,8 +486,8 @@ function MembersModal({
           <form onSubmit={handleAdd} className="flex gap-2">
             <Input
               placeholder="Username or email"
-              value={addEmail}
-              onChange={(e) => setAddEmail(e.target.value)}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
               className="flex-1"
             />
             <Button type="submit" loading={addLoading} icon={<UserPlus size={14} />}>

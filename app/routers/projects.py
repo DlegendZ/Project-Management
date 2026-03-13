@@ -11,6 +11,7 @@ from app.schemas.project import (
     AddMemberRequest,
     ProjectMemberResponse,
 )
+from app.schemas.user import UserResponse
 from app.schemas.common import PaginatedResponse
 from app.services.project_service import ProjectService
 
@@ -83,7 +84,7 @@ def archive_project(
     return ProjectService.archive_project(db, project_id, current_user)
 
 
-@router.get("/{project_id}/members", response_model=list[ProjectMemberResponse])
+@router.get("/{project_id}/members", response_model=list[UserResponse])
 def list_members(
     project_id: int,
     current_user: User = Depends(get_current_user),

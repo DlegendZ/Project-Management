@@ -48,3 +48,18 @@ class UserRepository:
         stmt = select(User).limit(limit).offset(offset).order_by(User.id)
         users = db.execute(stmt).scalars().all()
         return list(users), total
+
+    @staticmethod
+    def find_by_query(db: Session, q: str, limit: int = 10) -> list[User]:
+        """Case-insensitive partial match on username or email."""
+        pattern = f"%{q.lower()}%"
+        stmt = (
+            select(User)
+            .where(
+                func.lower(User.username).like(pattern)
+                | func.lower(User.email).like(pattern)
+            )
+            .order_by(User.username)
+            .limit(limit)
+        )
+        return list(db.execute(stmt).scalars().all())

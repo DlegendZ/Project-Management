@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Shield, UserX, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Shield, UserX, UserCheck, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { usersApi } from '../api/users';
 import { useAuthStore } from '../store/authStore';
 import { Navigate } from 'react-router-dom';
@@ -23,10 +23,9 @@ export function AdminUsersPage() {
   const [search, setSearch] = useState('');
 
   const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
+  const [activateTarget, setActivateTarget] = useState<User | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-
-  if (me?.role !== 'admin') return <Navigate to="/" replace />;
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -40,6 +39,8 @@ export function AdminUsersPage() {
   }, [page]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  if (me?.role !== 'admin') return <Navigate to="/" replace />;
 
   const filtered = search
     ? users.filter(
@@ -59,6 +60,21 @@ export function AdminUsersPage() {
       fetchUsers();
     } catch {
       toast.error('Failed to deactivate user');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleActivate = async () => {
+    if (!activateTarget) return;
+    setActionLoading(true);
+    try {
+      await usersApi.activate(activateTarget.id);
+      toast.success(`${activateTarget.username} activated`);
+      setActivateTarget(null);
+      fetchUsers();
+    } catch {
+      toast.error('Failed to activate user');
     } finally {
       setActionLoading(false);
     }
@@ -161,6 +177,15 @@ export function AdminUsersPage() {
                           <UserX size={13} /> Deactivate
                         </button>
                       )}
+                      {u.id !== me?.id && !u.is_active && (
+                        <button
+                          onClick={() => setActivateTarget(u)}
+                          className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 px-2 py-1 rounded hover:bg-green-900/20 transition-colors"
+                          title="Activate"
+                        >
+                          <UserCheck size={13} /> Activate
+                        </button>
+                      )}
                       {u.id !== me?.id && (
                         <button
                           onClick={() => setDeleteTarget(u)}
@@ -217,6 +242,15 @@ export function AdminUsersPage() {
         message={`Deactivate "${deactivateTarget?.username}"? They won't be able to log in.`}
         confirmLabel="Deactivate"
         variant="danger"
+        loading={actionLoading}
+      />
+      <ConfirmModal
+        isOpen={!!activateTarget}
+        onClose={() => setActivateTarget(null)}
+        onConfirm={handleActivate}
+        title="Activate User"
+        message={`Activate "${activateTarget?.username}"? They will be able to log in again.`}
+        confirmLabel="Activate"
         loading={actionLoading}
       />
       <ConfirmModal

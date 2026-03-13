@@ -19,6 +19,7 @@ class TaskCreate(BaseModel):
     status: TaskStatus = TaskStatus.todo
     priority: TaskPriority = TaskPriority.medium
     due_date: Optional[date] = None
+    assignee_ids: Optional[list[int]] = None
 
     @field_validator("title")
     @classmethod
@@ -43,6 +44,7 @@ class TaskUpdate(BaseModel):
     status: Optional[TaskStatus] = None
     priority: Optional[TaskPriority] = None
     due_date: Optional[date] = None
+    assignee_ids: Optional[list[int]] = None
 
     @field_validator("title")
     @classmethod

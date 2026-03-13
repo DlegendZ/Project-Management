@@ -26,6 +26,15 @@ def get_own_profile(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+@router.get("/search", response_model=list[UserResponse])
+def search_users(
+    q: str = Query(..., min_length=1),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return UserService.search_users(db, q)
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: int,
@@ -51,6 +60,15 @@ def deactivate_user(
     db: Session = Depends(get_db),
 ):
     return UserService.deactivate_user(db, user_id)
+
+
+@router.patch("/{user_id}/activate", response_model=UserResponse)
+def activate_user(
+    user_id: int,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    return UserService.activate_user(db, user_id)
 
 
 @router.delete("/{user_id}", status_code=204)

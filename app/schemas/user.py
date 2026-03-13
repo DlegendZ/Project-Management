@@ -30,9 +30,9 @@ class UpdateProfileRequest(BaseModel):
             return v
         if not 3 <= len(v) <= 50:
             raise ValueError("Username must be 3-50 characters")
-        if not re.match(r"^[a-zA-Z0-9_]+$", v):
+        if not re.match(r"^[a-zA-Z0-9_ ]+$", v):
             raise ValueError(
-                "Username must contain only alphanumeric characters and underscores"
+                "Username must contain only alphanumeric characters, underscores, and spaces"
             )
         return v
 

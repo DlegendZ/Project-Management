@@ -32,7 +32,7 @@ export function Sidebar() {
     <aside className="w-64 flex-shrink-0 bg-slate-800 border-r border-slate-700 flex flex-col h-screen sticky top-0">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-700">
-        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+        <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
           <Trello size={16} className="text-white" />
         </div>
         <span className="text-slate-100 font-semibold text-lg">TrelloLite</span>

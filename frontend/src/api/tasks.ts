@@ -19,6 +19,16 @@ export const tasksApi = {
   delete: (projectId: number, taskId: number) =>
     apiClient.delete(`/projects/${projectId}/tasks/${taskId}`).then((r) => r.data),
 
-  mine: (params?: { limit?: number; offset?: number }) =>
+  mine: (params?: Pick<TaskFilters, 'status' | 'priority' | 'sort_by' | 'sort_dir' | 'limit' | 'offset'>) =>
     apiClient.get<PaginatedResponse<Task>>('/tasks/mine', { params }).then((r) => r.data),
+
+  assign: (projectId: number, taskId: number, userId: number) =>
+    apiClient
+      .post(`/projects/${projectId}/tasks/${taskId}/assignments`, { user_id: userId })
+      .then((r) => r.data),
+
+  unassign: (projectId: number, taskId: number, userId: number) =>
+    apiClient
+      .delete(`/projects/${projectId}/tasks/${taskId}/assignments/${userId}`)
+      .then((r) => r.data),
 };

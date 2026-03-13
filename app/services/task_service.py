@@ -101,23 +101,15 @@ class TaskService:
         is_owner = project.owner_id == user.id
         is_creator = task.created_by == user.id
         is_admin = user.role == UserRole.admin
+        is_assignee = AssignmentRepository.get_by_task_and_user(db, task_id, user.id) is not None
 
-        if is_admin or is_owner or is_creator:
+        if is_admin or is_owner or is_creator or is_assignee:
             # Full update allowed
             updates = {k: v for k, v in data.model_dump(exclude_unset=True).items()}
         else:
-            # Member: only status, and only if assigned
-            assignment = AssignmentRepository.get_by_task_and_user(db, task_id, user.id)
-            if not assignment:
-                raise ForbiddenException(
-                    "permission_denied", "You can only update tasks assigned to you"
-                )
-            allowed_updates = {"status"}
-            updates = {
-                k: v
-                for k, v in data.model_dump(exclude_unset=True).items()
-                if k in allowed_updates
-            }
+            raise ForbiddenException(
+                "permission_denied", "You don't have permission to update this task"
+            )
 
         # Handle assignee_ids separately
         assignee_ids = updates.pop("assignee_ids", None)

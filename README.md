@@ -34,8 +34,8 @@ A full-stack project management app inspired by Trello. Organize work into proje
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/trello-lite.git
-cd trello-lite
+git clone https://github.com/DlegendZ/Project-Management
+cd Project-Management
 ```
 
 ---
@@ -47,6 +47,7 @@ Create a PostgreSQL database:
 ```sql
 CREATE DATABASE trello_lite;
 CREATE USER admin WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON SCHEMA public TO admin;
 GRANT ALL PRIVILEGES ON DATABASE trello_lite TO admin;
 ```
 

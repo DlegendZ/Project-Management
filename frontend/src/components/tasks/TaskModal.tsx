@@ -47,6 +47,7 @@ export function TaskModal({
   projectOwnerId = undefined,
 }: TaskModalProps) {
   const isEdit = !!task;
+  const isAdmin = currentUser?.role === "admin";
   const isProjectOwner = currentUser && projectOwnerId
     ? currentUser.id === projectOwnerId
     : false;
@@ -57,7 +58,7 @@ export function TaskModal({
     ? task.assignees?.some((a) => a.id === currentUser.id) ?? false
     : true;
   const authorizationError =
-    isEdit && !isUserAssigned && !isTaskCreator && !isProjectOwner
+    isEdit && !isAdmin && !isUserAssigned && !isTaskCreator && !isProjectOwner
       ? "Only the task assignee, creator, or project owner can edit this task"
       : null;
 
